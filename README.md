@@ -1,5 +1,5 @@
 # Linnorm
-Linnorm is an R package for RNA-seq expression normalization. It also includes several functions for the simulation of RNA-seq datasets using a reference dataset and a specified distribution.
+Linnorm is an R package for RNA-seq expression normalization. It also includes several functions for the simulation of RNA-seq dataset using a reference dataset and a specified distribution.
 
 Linnorm_x.x.tar.gz is the installation file for R. The source codes are located in the Linnorm directory.
 
