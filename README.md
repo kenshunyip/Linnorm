@@ -9,6 +9,7 @@ Install:
 1) Download Linnorm_x.x.tar.gz and upload it onto your working directory
 
 2) In R environment, run:
+
 	install.packages("Linnorm_x.x.tar.gz")
 	
 3) Done
