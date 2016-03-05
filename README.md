@@ -3,6 +3,9 @@ Linnorm is an R package for RNA-seq expression normalization. It also includes s
 
 Linnorm_x.x.tar.gz is the installation file for R. The source codes are located in the Linnorm directory.
 
+We really appreciate bug and error reports. If you have any problem running Linnorm, please contact the first arthor, Ken, at shunyip@bu.edu. Thanks!
+
+
 
 Install:
 
