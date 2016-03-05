@@ -1,0 +1,11 @@
+Package: Linnorm
+Type: Package
+Title: Linear model and normality based normalization (Linnorm) for RNA-seq expression dataset or large scale count data.
+Version: 1.0
+Date: 2015-11-27
+Authors@R: person("Ken-Shun-Hang", "Yip", email = "shunyip@bu.edu", role = c("aut", "cre"))
+Maintainer: Ken Shun Hang Yip <shunyip@bu.edu>
+Description: This is a package for Linear model and normality based normalization (Linnorm) for RNA-seq or count data.
+License: GPL (>= 2)
+Imports: Rcpp (>= 0.12.2), RcppArmadillo, MASS
+LinkingTo: Rcpp, RcppArmadillo, MASS
