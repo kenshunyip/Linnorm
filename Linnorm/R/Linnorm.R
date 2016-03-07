@@ -131,8 +131,8 @@ GammaSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showinf
 	#Minimum FC for pvalue to reach 0.05
 	pvalue <- 1
 	minBound <- 1
-	#FC of 6 is sure to be significant, so there is no need to search for boundary
-	maxBound <- 6
+	#FC of 5 is sure to be significant, so there is no need to search for boundary
+	maxBound <- 5
 	midBound <- round((minBound + maxBound)/2,4)
 	s <- median(rowMeans(thisdata_ori))
 	theK <- Klist(s)
@@ -335,8 +335,8 @@ PoissonSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showi
 	#Minimum FC for pvalue to reach 0.05
 	pvalue <- 1
 	minBound <- 1
-	#FC of 6 is sure to be significant, so there is no need to search for boundary
-	maxBound <- 6
+	#FC of 5 is sure to be significant, so there is no need to search for boundary
+	maxBound <- 5
 	midBound <- round((minBound + maxBound)/2,4)
 	s <- median(rowMeans(thisdata))
 	NR2 <- NumRep
@@ -534,8 +534,8 @@ LogNormSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showi
 	#Minimum FC for pvalue to reach 0.05
 	pvalue <- 1
 	minBound <- 1
-	#FC of 6 is sure to be significant, so there is no need to search for boundary
-	maxBound <- 6
+	#FC of 5 is sure to be significant, so there is no need to search for boundary
+	maxBound <- 5
 	midBound <- round((minBound + maxBound)/2,4)
 	mediandata <- thisdata[round(length(thisdata[,1])/2,0),]
 	theMean <- median(rowMeans(thisdata_ori))
@@ -766,8 +766,8 @@ NBSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showinfo=F
 	#Minimum FC for pvalue to reach 0.05
 	pvalue <- 1
 	minBound <- 1
-	#FC of 6 is sure to be significant, so there is no need to search for boundary
-	maxBound <- 6
+	#FC of 5 is sure to be significant, so there is no need to search for boundary
+	maxBound <- 5
 	midBound <- round((minBound + maxBound)/2,4)
 	themean <- median(rowMeans(thisdata_ori))
 	theDis <- FindDispersion(themean)
