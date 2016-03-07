@@ -40,7 +40,7 @@ Linnorm <- function(datamatrix, showinfo = FALSE, method="default",perturbation=
 	}
 	datamatrix <- expdata
 	expdata <- expdata[order(rowMeans(expdata)),]	
-	if (method == "default") {
+	if (method == "default") {		
 		#trim outliers
 		expdata <- expdata[rowSums(expdata != 0) >= (length(expdata[1,]) * minZeroPortion),]
 		
@@ -74,21 +74,21 @@ Linnorm <- function(datamatrix, showinfo = FALSE, method="default",perturbation=
 #' simulateddata <- GammaSim(expMatrix)
 GammaSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showinfo=FALSE, MaxLibSizelog2FC=0.5) {
 	thisdata <- na.omit(as.matrix(thisdata))
-	thisdata_ori <- thisdata
-	thisdata_ori <- thisdata_ori[rowMeans(thisdata_ori) >= 1,]
+
 	#Turn it into relative expression
 	LibSize <- colSums(thisdata)
 	for (i in seq_along(thisdata[1,])) {
-		thisdata[,i] <- (thisdata[,i] * mean(LibSize))/sum(thisdata[,i])
+		thisdata[,i] <- (thisdata[,i] * min(LibSize))/sum(thisdata[,i])
 	}
 	#sort and remove features with all zeros.
+	thisdata <- thisdata[rowMeans(thisdata) >= 1,]
+	thisdata_ori <- thisdata
 	thisdata <- thisdata[order(rowMeans(thisdata)),]
 	thisdata <- thisdata[rowSums(thisdata != 0) == length(thisdata[1,]),]
-	thisdata <- thisdata[rowMeans(thisdata) >= 1,]
+	
 	meanList <- rowMeans(thisdata)
 	b <- log(meanList)
-	thisdata <- thisdata[!b %in% boxplot.stats(b)$out,]
-	meanList <- meanList[!b %in% boxplot.stats(b)$out]
+
 	Klist <- as.numeric(unlist(apply(thisdata,1,gammaShape)))
 	if (length(Klist) == length(meanList)) {
 		Fit <- lm((log(Klist))~(log(meanList)))
@@ -131,8 +131,8 @@ GammaSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showinf
 	#Minimum FC for pvalue to reach 0.05
 	pvalue <- 1
 	minBound <- 1
-	#FC of 100 is sure to be significant, so there is no need to search for boundary
-	maxBound <- 100
+	#FC of 6 is sure to be significant, so there is no need to search for boundary
+	maxBound <- 6
 	midBound <- round((minBound + maxBound)/2,4)
 	s <- median(rowMeans(thisdata_ori))
 	theK <- Klist(s)
@@ -301,16 +301,14 @@ GammaSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showinf
 #' simulateddata <- PoissonSim(expMatrix)
 PoissonSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showinfo=FALSE, MaxLibSizelog2FC=0.5) {
 	thisdata <- na.omit(as.matrix(thisdata))
-	thisdata_ori <- thisdata
-	thisdata_ori <- thisdata_ori[rowMeans(thisdata_ori) >= 1,]
 	#Turn it into relative expression
 	LibSize <- colSums(thisdata)
 	for (i in seq_along(thisdata[1,])) {
-		thisdata[,i] <- (thisdata[,i] * mean(LibSize))/sum(thisdata[,i])
+		thisdata[,i] <- (thisdata[,i] * min(LibSize))/sum(thisdata[,i])
 	}
 	#sort and remove features with all zeros.
 	thisdata <- thisdata[order(rowMeans(thisdata)),]
-	thisdata <- thisdata[rowMeans(thisdata) > 0,]
+	thisdata <- thisdata[rowMeans(thisdata) >= 1,]
 	
 	poismatrix <- matrix(0, ncol=(2 * NumRep), nrow=NumFea)
 	RN <- vector(mode="character", NumFea)
@@ -337,10 +335,10 @@ PoissonSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showi
 	#Minimum FC for pvalue to reach 0.05
 	pvalue <- 1
 	minBound <- 1
-	#FC of 100 is sure to be significant, so there is no need to search for boundary
-	maxBound <- 100
+	#FC of 6 is sure to be significant, so there is no need to search for boundary
+	maxBound <- 6
 	midBound <- round((minBound + maxBound)/2,4)
-	s <- median(rowMeans(thisdata_ori))
+	s <- median(rowMeans(thisdata))
 	NR2 <- NumRep
 	design <- matrix(nrow=(NR2 * 2), ncol=2)
 	colnames(design) <- c("SampleInfo", "POIS")
@@ -431,8 +429,8 @@ PoissonSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showi
 	tobechanged <- sample(1:NumFea,NumDiff)
 	for (i in 1:NumFea) {
 		#sample from thisdata
-		TDsample <- sample(1:length(thisdata_ori[,1]),1)
-		dmean <- mean(as.numeric(thisdata_ori[TDsample,]))
+		TDsample <- sample(1:length(thisdata[,1]),1)
+		dmean <- mean(as.numeric(thisdata[TDsample,]))
 		if (dmean == 0) {
 			poismatrix[i,] <- rep(0,length(poismatrix[1,]))
 		} else {
@@ -494,17 +492,18 @@ PoissonSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showi
 #' simulateddata <- LogNormSim(expMatrix)
 LogNormSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showinfo=FALSE, MaxLibSizelog2FC=0.5) {
 	thisdata <- na.omit(as.matrix(thisdata))
-	thisdata_ori <- thisdata
-	thisdata_ori <- thisdata_ori[rowMeans(thisdata_ori) >= 1,]
 	#Turn it into relative expression
 	LibSize <- colSums(thisdata)
 	for (i in seq_along(thisdata[1,])) {
-		thisdata[,i] <- (thisdata[,i] * mean(LibSize))/sum(thisdata[,i])
+		thisdata[,i] <- (thisdata[,i] * min(LibSize))/sum(thisdata[,i])
 	}
 	#sort and remove features with all zeros.
-	thisdata <- thisdata[order(rowMeans(thisdata)),]
 	thisdata <- thisdata[rowMeans(thisdata) >= 1,]
+	thisdata_ori <- thisdata
+	thisdata <- thisdata[order(rowMeans(thisdata)),]
 	thisdata <- thisdata[rowSums(thisdata != 0) == length(thisdata[1,]),]
+	
+	
 	Fit <- lm((log(rowSDs(thisdata)))~(log(rowMeans(thisdata))))
 	MeanList <- rowMeans(thisdata)
 	FindSD <- function(inputmean) {
@@ -535,8 +534,8 @@ LogNormSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showi
 	#Minimum FC for pvalue to reach 0.05
 	pvalue <- 1
 	minBound <- 1
-	#FC of 100 is sure to be significant, so there is no need to search for boundary
-	maxBound <- 100
+	#FC of 6 is sure to be significant, so there is no need to search for boundary
+	maxBound <- 6
 	midBound <- round((minBound + maxBound)/2,4)
 	mediandata <- thisdata[round(length(thisdata[,1])/2,0),]
 	theMean <- median(rowMeans(thisdata_ori))
@@ -712,17 +711,19 @@ LogNormSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showi
 #' simulateddata <- NBSim(expMatrix)
 NBSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showinfo=FALSE, MaxLibSizelog2FC=0.5) {
 	thisdata <- na.omit(as.matrix(thisdata))
-	thisdata_ori <- thisdata
-	thisdata_ori <- thisdata_ori[rowMeans(thisdata_ori) >= 1,]
+	
 	#Turn it into relative expression
 	LibSize <- colSums(thisdata)
 	for (i in seq_along(thisdata[1,])) {
-		thisdata[,i] <- (thisdata[,i] * mean(LibSize))/sum(thisdata[,i])
+		thisdata[,i] <- (thisdata[,i] * min(LibSize))/sum(thisdata[,i])
 	}
 	#sort and remove features with all zeros.
-	thisdata <- thisdata[order(rowMeans(thisdata)),]
 	thisdata <- thisdata[rowMeans(thisdata) >= 1,]
+	thisdata_ori <- thisdata
+	thisdata <- thisdata[order(rowMeans(thisdata)),]
 	thisdata <- thisdata[rowSums(thisdata != 0) == length(thisdata[1,]),]
+	
+
 	require(MASS)
 	MeanList <- vector(mode="numeric",length(thisdata[,1]))
 	d <- vector(mode="numeric",length(thisdata[,1]))
@@ -765,8 +766,8 @@ NBSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showinfo=F
 	#Minimum FC for pvalue to reach 0.05
 	pvalue <- 1
 	minBound <- 1
-	#FC of 100 is sure to be significant, so there is no need to search for boundary
-	maxBound <- 100
+	#FC of 6 is sure to be significant, so there is no need to search for boundary
+	maxBound <- 6
 	midBound <- round((minBound + maxBound)/2,4)
 	themean <- median(rowMeans(thisdata_ori))
 	theDis <- FindDispersion(themean)

@@ -1,6 +1,6 @@
 /*
 The MIT License (MIT) 
-Copyright (c) 2016 by Shun Hang Yip <shunyip@bu.edu>
+Copyright (c) <2016> <Shun Hang Yip>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -220,15 +220,19 @@ double LocalSearch(const arma::mat& GeneExp, double minBound, double maxBound, d
 double LocateLambda(const arma::mat& GeneExp, double search_exponent) {
 	//Boundary of ILS are minBound and maxBound
 	double leastMean = 0;
-	int fivepercent = GeneExp.n_cols / 10;
+	int fivepercent = GeneExp.n_cols / 20;
 	if (fivepercent < 1)
 		fivepercent = 1;
+	int numnonzero = 0;
 	for (int j = 0; j < fivepercent; j++) {
 		for (int i = 0; i < GeneExp.n_cols ; i ++) {
-			leastMean += GeneExp.at(j,i);		
+			if ( GeneExp.at(j,i) > 0) {
+				leastMean += GeneExp.at(j,i);
+				numnonzero++;
+			}				
 		}
 	}
-	leastMean = leastMean/(GeneExp.n_cols * fivepercent);
+	leastMean = leastMean/numnonzero;
 	double maxBound = 1/leastMean;
 	double minBound = 1;
 	//Find local min
