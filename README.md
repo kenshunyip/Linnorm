@@ -9,6 +9,8 @@ In addition, it contains several functions that simulates RNA-seq expression dat
 Linnorm_x.x.tar.gz contains the installation file for R. Source codes are located in the Linnorm directory.
 
 
+
+
 Installation:
 
 
@@ -22,6 +24,8 @@ Installation:
 
 
 4) Done
+
+
 
 
 
