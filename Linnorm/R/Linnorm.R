@@ -1,10 +1,11 @@
 #' Linnorm Function
 #'
-#' This function performs the Linear model and normality based normalization method (Linnorm).
-#' @param datamatrix	The matrix or data frame that contains your dataset. Each row is a feature (ex. Gene) and each column is a sample. Undefined values such as NA are not supported.
-#' @param method	"default" or "lambda" The program will output the transformed matrix if the method is "default". Otherwise, if the method is "lambda", the program will output a lambda value.
-#' @param minZeroPortion double >=0, <= 1 Rows without at least this portion of non-zero values will not be used in the calculation of normalizing parameter. Defaults to 2/3.
-#' @param perturbation	Integer >= 2. This is the perturbation during the Iterated Local Search algorithm, when we are searching for the global minimum of the "deviation parameter" measure for lambda (Please refer to the article). The range of the areas searched locally will be the exponents of this perturbation, from closest to furthest from the local minima found by using the whole range. Increasing this value will make the program much faster, but less capable of finding the global minimum. Defaults to 10.
+#' This function performs the Linear model and normality based normalization method (Linnorm) for RNA-seq expression data or large scale count data.
+#' @param datamatrix	The matrix or data frame that contains your dataset. Each row is a feature (or Gene) and each column is a sample (or replicate). Undefined values such as NA are not supported.
+#' @param method	"default" or "lambda" The program will output the transformed matrix if the method is "default". If the method is "lambda", the program will output a lambda value (normalizedExp = log1p(lambda * Matrix)).
+#' @param minZeroPortion double >=0, <= 1. Featuress without at least this portion of non-zero values will not be used in the calculation of normalizing parameter. Defaults to 2/3.
+#' @param perturbation integer >=2. To search for an optimal minimal deviation parameter (please see the article), Linnorm uses the iterated local search algorithm which perturbs away from the initial local minimum. The range of the area searched in each perturbation is exponentially increased as the area get further away from the initial local minimum, which is determined by their index. This range is calculated by 10 * (perturbation ^ index). 
+#' @return This function returns either a transformed data matrix or a lambda value. Please see the "method" parameter.
 #' @keywords Linnorm RNA-seq Raw Count Expression RPKM FPKM TPM CPM normalization transformation Parametric
 #' @export
 #' @examples
@@ -61,13 +62,14 @@ Linnorm <- function(datamatrix, showinfo = FALSE, method="default",perturbation=
 }
 
 
-#' This function simulates a dataset with gamma distribution based on the input dataset.
-#' @param thisdata Matrix:	The matrix or data frame that contains your dataset. Each row is a feature (ex. Gene) and each column is a replicate. Undefined values such as NA are not supported. It is assumed that all samples are replicates of the same sample.
+#' This function simulates a RNA-seq dataset with the Gamma distribution based on the input dataset.
+#' @param thisdata Matrix:	The matrix or data frame that contains your dataset. Each row is a gene and each column is a replicate. Undefined values such as NA are not supported. This program assumes that all columns are replicates of the same sample.
 #' @param NumRep Integer: The number of replicates. This is half of the number of output samples. Defaults to 3.
 #' @param NumDiff Integer: The number of Differentially Changed Features. Defaults to 5000.
 #' @param NumFea Integer: The number of Total Features. Defaults to 20000.
 #' @param showinfo Logical: should we show data information on the console? Defaults to FALSE.
 #' @param MaxLibSizelog2FC Double: The maximum library size difference from the mean that is allowed, in terms of log 2 fold change. Set to 0 to prevent program from generating library size differences. Defaults to 0.5.
+#' @return This function returns a list that contains a matrix of count data in integer raw count and a vector that indicates the genes that are differentially expressed. In the matrix, each row is a gene and each column is a replicate. The first NumRep (see parameter) of the columns belong to sample 1, and the last NumRep (see parameter) of the columns belong to sample 2. There will be NumFea (see parameter) number of columns.
 #' @keywords RNA-seq Raw Count Expression Simulation Gamma distribution
 #' @export
 #' @examples
@@ -288,13 +290,14 @@ GammaSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showinf
 	return (results)
 }
 
-#' This function simulates a dataset with poisson distribution based on the input dataset.
-#' @param thisdata Matrix:	The matrix or data frame that contains your dataset. Each row is a feature (ex. Gene) and each column is a replicate. Undefined values such as NA are not supported. It is assumed that all samples are replicates of the same sample.
+#' This function simulates a RNA-seq dataset with the Poisson distribution based on the input dataset.
+#' @param thisdata Matrix:	The matrix or data frame that contains your dataset. Each row is a gene and each column is a replicate. Undefined values such as NA are not supported. This program assumes that all columns are replicates of the same sample.
 #' @param NumRep Integer: The number of replicates. This is half of the number of output samples. Defaults to 3.
 #' @param NumDiff Integer: The number of Differentially Changed Features. Defaults to 5000.
 #' @param NumFea Integer: The number of Total Features. Defaults to 20000.
 #' @param showinfo Logical: should we show data information on the console? Defaults to FALSE.
 #' @param MaxLibSizelog2FC Double: The maximum library size difference from the mean that is allowed, in terms of log 2 fold change. Set to 0 to prevent program from generating library size differences. Defaults to 0.5.
+#' @return This function returns a list that contains a matrix of count data in integer raw count and a vector that indicates the genes that are differentially expressed. In the matrix, each row is a gene and each column is a replicate. The first NumRep (see parameter) of the columns belong to sample 1, and the last NumRep (see parameter) of the columns belong to sample 2. There will be NumFea (see parameter) number of columns.
 #' @keywords RNA-seq Raw Count Expression Simulation Poisson distribution
 #' @export
 #' @examples
@@ -479,13 +482,14 @@ PoissonSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showi
 }
 
 
-#' This function simulates a dataset with log normal distribution based on the input dataset.
-#' @param thisdata Matrix:	The matrix or data frame that contains your dataset. Each row is a feature (ex. Gene) and each column is a replicate. Undefined values such as NA are not supported. It is assumed that all samples are replicates of the same sample.
+#' This function simulates a RNA-seq dataset with the Log Normal distribution based on the input dataset.
+#' @param thisdata Matrix:	The matrix or data frame that contains your dataset. Each row is a gene and each column is a replicate. Undefined values such as NA are not supported. This program assumes that all columns are replicates of the same sample.
 #' @param NumRep Integer: The number of replicates. This is half of the number of output samples. Defaults to 3.
 #' @param NumDiff Integer: The number of Differentially Changed Features. Defaults to 5000.
 #' @param NumFea Integer: The number of Total Features. Defaults to 20000.
 #' @param showinfo Logical: should we show data information on the console? Defaults to FALSE.
 #' @param MaxLibSizelog2FC Double: The maximum library size difference from the mean that is allowed, in terms of log 2 fold change. Set to 0 to prevent program from generating library size differences. Defaults to 0.5.
+#' @return This function returns a list that contains a matrix of count data in integer raw count and a vector that indicates the genes that are differentially expressed. In the matrix, each row is a gene and each column is a replicate. The first NumRep (see parameter) of the columns belong to sample 1, and the last NumRep (see parameter) of the columns belong to sample 2. There will be NumFea (see parameter) number of columns.
 #' @keywords RNA-seq Raw Count Expression Simulation Log Normal distribution
 #' @export
 #' @examples
@@ -698,13 +702,14 @@ LogNormSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showi
 	return (results)
 }
 
-#' This function simulates a dataset with negative binomial distribution based on the input dataset.
-#' @param thisdata Matrix:	The matrix or data frame that contains your dataset. Each row is a feature (ex. Gene) and each column is a replicate. Undefined values such as NA are not supported. It is assumed that all samples are replicates of the same sample.
+#' This function simulates a RNA-seq dataset with the Negative Binomial distribution based on the input dataset.
+#' @param thisdata Matrix:	The matrix or data frame that contains your dataset. Each row is a gene and each column is a replicate. Undefined values such as NA are not supported. This program assumes that all columns are replicates of the same sample.
 #' @param NumRep Integer: The number of replicates. This is half of the number of output samples. Defaults to 3.
 #' @param NumDiff Integer: The number of Differentially Changed Features. Defaults to 5000.
 #' @param NumFea Integer: The number of Total Features. Defaults to 20000.
 #' @param showinfo Logical: should we show data information on the console? Defaults to FALSE.
 #' @param MaxLibSizelog2FC Double: The maximum library size difference from the mean that is allowed, in terms of log 2 fold change. Set to 0 to prevent program from generating library size differences. Defaults to 0.5.
+#' @return This function returns a list that contains a matrix of count data in integer raw count and a vector that indicates the genes that are differentially expressed. In the matrix, each row is a gene and each column is a replicate. The first NumRep (see parameter) of the columns belong to sample 1, and the last NumRep (see parameter) of the columns belong to sample 2. There will be NumFea (see parameter) number of columns.
 #' @keywords RNA-seq Raw Count Expression Simulation Negative Binomial distribution
 #' @export
 #' @examples

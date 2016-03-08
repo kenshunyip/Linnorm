@@ -2,13 +2,13 @@
 % Please edit documentation in R/Linnorm.R
 \name{PoissonSim}
 \alias{PoissonSim}
-\title{This function simulates a dataset with poisson distribution based on the input dataset.}
+\title{This function simulates a RNA-seq dataset with the Poisson distribution based on the input dataset.}
 \usage{
 PoissonSim(thisdata, NumRep = 3, NumDiff = 5000, NumFea = 20000,
   showinfo = FALSE, MaxLibSizelog2FC = 0.5)
 }
 \arguments{
-\item{thisdata}{Matrix:    The matrix or data frame that contains your dataset. Each row is a feature (ex. Gene) and each column is a replicate. Undefined values such as NA are not supported. It is assumed that all samples are replicates of the same sample.}
+\item{thisdata}{Matrix:    The matrix or data frame that contains your dataset. Each row is a gene and each column is a replicate. Undefined values such as NA are not supported. This program assumes that all columns are replicates of the same sample.}
 
 \item{NumRep}{Integer: The number of replicates. This is half of the number of output samples. Defaults to 3.}
 
@@ -20,8 +20,11 @@ PoissonSim(thisdata, NumRep = 3, NumDiff = 5000, NumFea = 20000,
 
 \item{MaxLibSizelog2FC}{Double: The maximum library size difference from the mean that is allowed, in terms of log 2 fold change. Set to 0 to prevent program from generating library size differences. Defaults to 0.5.}
 }
+\value{
+This function returns a list that contains a matrix of count data in integer raw count and a vector that indicates the genes that are differentially expressed. In the matrix, each row is a gene and each column is a replicate. The first NumRep (see parameter) of the columns belong to sample 1, and the last NumRep (see parameter) of the columns belong to sample 2. There will be NumFea (see parameter) number of columns.
+}
 \description{
-This function simulates a dataset with poisson distribution based on the input dataset.
+This function simulates a RNA-seq dataset with the Poisson distribution based on the input dataset.
 }
 \examples{
 simulateddata <- PoissonSim(expMatrix)

@@ -8,16 +8,19 @@ Linnorm(datamatrix, showinfo = FALSE, method = "default",
   perturbation = 10, minZeroPortion = 2/3)
 }
 \arguments{
-\item{datamatrix}{The matrix or data frame that contains your dataset. Each row is a feature (ex. Gene) and each column is a sample. Undefined values such as NA are not supported.}
+\item{datamatrix}{The matrix or data frame that contains your dataset. Each row is a feature (or Gene) and each column is a sample (or replicate). Undefined values such as NA are not supported.}
 
-\item{method}{"default" or "lambda" The program will output the transformed matrix if the method is "default". Otherwise, if the method is "lambda", the program will output a lambda value.}
+\item{method}{"default" or "lambda" The program will output the transformed matrix if the method is "default". If the method is "lambda", the program will output a lambda value (normalizedExp = log1p(lambda * Matrix)).}
 
-\item{perturbation}{Integer >= 2. This is the perturbation during the Iterated Local Search algorithm, when we are searching for the global minimum of the "deviation parameter" measure for lambda (Please refer to the article). The range of the areas searched locally will be the exponents of this perturbation, from closest to furthest from the local minima found by using the whole range. Increasing this value will make the program much faster, but less capable of finding the global minimum. Defaults to 10.}
+\item{perturbation}{integer >=2. To search for an optimal minimal deviation parameter (please see the article), Linnorm uses the iterated local search algorithm which perturbs away from the initial local minimum. The range of the area searched in each perturbation is exponentially increased as the area get further away from the initial local minimum, which is determined by their index. This range is calculated by 10 * (perturbation ^ index).}
 
-\item{minZeroPortion}{double >=0, <= 1 Rows without at least this portion of non-zero values will not be used in the calculation of normalizing parameter. Defaults to 2/3.}
+\item{minZeroPortion}{double >=0, <= 1. Featuress without at least this portion of non-zero values will not be used in the calculation of normalizing parameter. Defaults to 2/3.}
+}
+\value{
+This function returns either a transformed data matrix or a lambda value. Please see the "method" parameter.
 }
 \description{
-This function performs the Linear model and normality based normalization method (Linnorm).
+This function performs the Linear model and normality based normalization method (Linnorm) for RNA-seq expression data or large scale count data.
 }
 \examples{
 normalizedExp <- Linnorm(expMatrix, showinfo = "TRUE")
