@@ -38,15 +38,3 @@ BEGIN_RCPP
     return Rcpp::wrap(LocateLambda(GeneExp,search_exponent));
 END_RCPP
 }
-
-// [[Rcpp::export]]
-double LocateLambda2( arma::mat GeneExp, double search_exponent);
-RcppExport SEXP LocateLambda2(SEXP xSEXP,SEXP ySEXP) {
-BEGIN_RCPP
-    Rcpp::RObject __result;
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< arma::mat >::type GeneExp(xSEXP);
-	Rcpp::traits::input_parameter< double >::type search_exponent(ySEXP);
-    return Rcpp::wrap(LocateLambda2(GeneExp,search_exponent));
-END_RCPP
-}
