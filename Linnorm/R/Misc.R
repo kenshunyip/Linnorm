@@ -15,6 +15,3 @@ gammaShape <- function(x) {
 LocateLambda <- function(x,y) {
     .Call('LocateLambda', PACKAGE = 'Linnorm', x,y)
 }
-LocateLambda2 <- function(x,y) {
-    .Call('LocateLambda2', PACKAGE = 'Linnorm', x,y)
-}

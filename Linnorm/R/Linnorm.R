@@ -69,8 +69,8 @@ Linnorm <- function(datamatrix, showinfo = FALSE, method="default",perturbation=
 #' @param NumFea Integer: The number of Total Features. Defaults to 20000.
 #' @param showinfo Logical: should we show data information on the console? Defaults to FALSE.
 #' @param MaxLibSizelog2FC Double: The maximum library size difference from the mean that is allowed, in terms of log 2 fold change. Set to 0 to prevent program from generating library size differences. Defaults to 0.5.
-#' @return This function returns a list that contains a matrix of count data in integer raw count and a vector that indicates the genes that are differentially expressed. In the matrix, each row is a gene and each column is a replicate. The first NumRep (see parameter) of the columns belong to sample 1, and the last NumRep (see parameter) of the columns belong to sample 2. There will be NumFea (see parameter) number of columns.
-#' @keywords RNA-seq Raw Count Expression Simulation Gamma distribution
+#' @return This function returns a list that contains a matrix of count data in integer raw count and a vector that shows which genes are differentially expressed. In the matrix, each row is a gene and each column is a replicate. The first NumRep (see parameter) of the columns belong to sample 1, and the last NumRep (see parameter) of the columns belong to sample 2. There will be NumFea (see parameter) number of columns.
+#' @keywords RNA-seq Raw Count Expression Simulation Gamma distribution Simulate
 #' @export
 #' @examples
 #' simulateddata <- GammaSim(expMatrix)
@@ -297,8 +297,8 @@ GammaSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showinf
 #' @param NumFea Integer: The number of Total Features. Defaults to 20000.
 #' @param showinfo Logical: should we show data information on the console? Defaults to FALSE.
 #' @param MaxLibSizelog2FC Double: The maximum library size difference from the mean that is allowed, in terms of log 2 fold change. Set to 0 to prevent program from generating library size differences. Defaults to 0.5.
-#' @return This function returns a list that contains a matrix of count data in integer raw count and a vector that indicates the genes that are differentially expressed. In the matrix, each row is a gene and each column is a replicate. The first NumRep (see parameter) of the columns belong to sample 1, and the last NumRep (see parameter) of the columns belong to sample 2. There will be NumFea (see parameter) number of columns.
-#' @keywords RNA-seq Raw Count Expression Simulation Poisson distribution
+#' @return This function returns a list that contains a matrix of count data in integer raw count and a vector that shows which genes are differentially expressed. In the matrix, each row is a gene and each column is a replicate. The first NumRep (see parameter) of the columns belong to sample 1, and the last NumRep (see parameter) of the columns belong to sample 2. There will be NumFea (see parameter) number of columns.
+#' @keywords RNA-seq Raw Count Expression Simulation Poisson distribution Simulate
 #' @export
 #' @examples
 #' simulateddata <- PoissonSim(expMatrix)
@@ -489,8 +489,8 @@ PoissonSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showi
 #' @param NumFea Integer: The number of Total Features. Defaults to 20000.
 #' @param showinfo Logical: should we show data information on the console? Defaults to FALSE.
 #' @param MaxLibSizelog2FC Double: The maximum library size difference from the mean that is allowed, in terms of log 2 fold change. Set to 0 to prevent program from generating library size differences. Defaults to 0.5.
-#' @return This function returns a list that contains a matrix of count data in integer raw count and a vector that indicates the genes that are differentially expressed. In the matrix, each row is a gene and each column is a replicate. The first NumRep (see parameter) of the columns belong to sample 1, and the last NumRep (see parameter) of the columns belong to sample 2. There will be NumFea (see parameter) number of columns.
-#' @keywords RNA-seq Raw Count Expression Simulation Log Normal distribution
+#' @return This function returns a list that contains a matrix of count data in integer raw count and a vector that shows which genes are differentially expressed. In the matrix, each row is a gene and each column is a replicate. The first NumRep (see parameter) of the columns belong to sample 1, and the last NumRep (see parameter) of the columns belong to sample 2. There will be NumFea (see parameter) number of columns.
+#' @keywords RNA-seq Raw Count Expression Simulation Log Normal distribution Simulate
 #' @export
 #' @examples
 #' simulateddata <- LogNormSim(expMatrix)
@@ -709,8 +709,8 @@ LogNormSim <- function(thisdata, NumRep=3, NumDiff = 5000, NumFea = 20000, showi
 #' @param NumFea Integer: The number of Total Features. Defaults to 20000.
 #' @param showinfo Logical: should we show data information on the console? Defaults to FALSE.
 #' @param MaxLibSizelog2FC Double: The maximum library size difference from the mean that is allowed, in terms of log 2 fold change. Set to 0 to prevent program from generating library size differences. Defaults to 0.5.
-#' @return This function returns a list that contains a matrix of count data in integer raw count and a vector that indicates the genes that are differentially expressed. In the matrix, each row is a gene and each column is a replicate. The first NumRep (see parameter) of the columns belong to sample 1, and the last NumRep (see parameter) of the columns belong to sample 2. There will be NumFea (see parameter) number of columns.
-#' @keywords RNA-seq Raw Count Expression Simulation Negative Binomial distribution
+#' @return This function returns a list that contains a matrix of count data in integer raw count and a vector that shows which genes are differentially expressed. In the matrix, each row is a gene and each column is a replicate. The first NumRep (see parameter) of the columns belong to sample 1, and the last NumRep (see parameter) of the columns belong to sample 2. There will be NumFea (see parameter) number of columns.
+#' @keywords RNA-seq Raw Count Expression Simulation Negative Binomial distribution Simulate
 #' @export
 #' @examples
 #' simulateddata <- NBSim(expMatrix)
