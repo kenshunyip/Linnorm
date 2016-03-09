@@ -21,7 +21,7 @@ LogNormSim(thisdata, NumRep = 3, NumDiff = 5000, NumFea = 20000,
 \item{MaxLibSizelog2FC}{Double: The maximum library size difference from the mean that is allowed, in terms of log 2 fold change. Set to 0 to prevent program from generating library size differences. Defaults to 0.5.}
 }
 \value{
-This function returns a list that contains a matrix of count data in integer raw count and a vector that indicates the genes that are differentially expressed. In the matrix, each row is a gene and each column is a replicate. The first NumRep (see parameter) of the columns belong to sample 1, and the last NumRep (see parameter) of the columns belong to sample 2. There will be NumFea (see parameter) number of columns.
+This function returns a list that contains a matrix of count data in integer raw count and a vector that shows which genes are differentially expressed. In the matrix, each row is a gene and each column is a replicate. The first NumRep (see parameter) of the columns belong to sample 1, and the last NumRep (see parameter) of the columns belong to sample 2. There will be NumFea (see parameter) number of columns.
 }
 \description{
 This function simulates a RNA-seq dataset with the Log Normal distribution based on the input dataset.
@@ -35,6 +35,7 @@ simulateddata <- LogNormSim(expMatrix)
 \keyword{Normal}
 \keyword{RNA-seq}
 \keyword{Raw}
+\keyword{Simulate}
 \keyword{Simulation}
 \keyword{distribution}
 

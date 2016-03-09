@@ -95,15 +95,6 @@ double SkewVarKurt	(const arma::mat& GeneExp, const double& lambda2) {
 	double SumSDMean = 0;
 	double SumMeanSq = 0;
 	
-	//Going to normalize mean to the scale from 1 to 2, need the range here to prevent looping all genes twice
-	/*
-	//double minMean = 0, maxMean = 0;
-	//for (int i = 0; i < GeneExp.n_cols ; i++) {
-	//	minMean += log(GeneExp.at(0,i) * lambda2 + 1);
-	//	maxMean += log(GeneExp.at(GeneExp.n_rows-1,i) * lambda2 + 1);
-	//}
-	//double range = abs(maxMean - minMean);
-	*/
 	//One pass linear regression with one pass variance, skewness and kurtosis
 	for (int i = 0; i < GeneExp.n_rows; i ++) {
 		double mean = 0;
