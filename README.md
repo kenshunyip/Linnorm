@@ -20,7 +20,7 @@ Linnorm_x.x.tar.gz contains the installation file for R. Source codes are locate
 2) Inside your working directory, enter R environment.
 
 
-3) Run the command: install.packages("./Linnorm_x.x.tar.gz", repos=NULL, type="source")
+3) Run the command: install.packages("./Linnorm_0.99.0.tar.gz", repos=NULL, type="source")
 
 
 4) Done
@@ -32,4 +32,4 @@ Linnorm_x.x.tar.gz contains the installation file for R. Source codes are locate
 #Manual:
 
 
-Please see Linnorm_x_x_Manual.pdf
+Please see Linnorm_0.99.0_Manual.pdf
