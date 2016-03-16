@@ -3,14 +3,21 @@ Type: Package
 Title: Linear model and normality based normalization method (Linnorm)
 Version: 0.99.0
 Date: 2016-03-09
-Authors@R: person("Ken-Shun-Hang", "Yip", email = "shunyip@bu.edu", role = c("aut", "cre"))
+Author: Ken Shun Hang Yip <shunyip@bu.edu> <u3003188@connect.hku.hk>,
+	Pak Chung Sham <pcsham@hku.hk>, Junwen Wang <junwen@uw.edu>
 Maintainer: Ken Shun Hang Yip <shunyip@bu.edu>
 Description: A Normalization method for RNA-seq Expression data or large scale
-    count data for parametric tests. This package also includes several functions for the simulation of RNA-seq data based on known distributions.
+    count data for parametric tests. This package also includes several functions for the simulation of RNA-seq count data based on known distributions.
 License: MIT + file LICENSE
 Imports:
     Rcpp (>= 0.12.2),
     RcppArmadillo,
-    MASS
-LinkingTo: Rcpp, RcppArmadillo, MASS
+    MASS,
+	limma
+LinkingTo: Rcpp, RcppArmadillo
+Suggests: BiocStyle, knitr, rmarkdown, seqc
+VignetteBuilder: knitr
+biocViews: Sequencing, ChIPSeq, RNASeq, DifferentialExpression,
+        GeneExpression, Genetics, Normalization, Software, Transcription, BatchEffect
+NeedsCompilation: yes
 RoxygenNote: 5.0.1

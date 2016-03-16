@@ -10,24 +10,26 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 */
 
-
 #include <cstdlib>
 #include <iostream>
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 #include <RcppArmadillo.h>
 #include <vector>
-#include <random>
 #include <limits>
 // [[Rcpp::depends(RcppArmadillo)]]
 using namespace std;
 using namespace Rcpp;
 
+//Log likelihood function of gamma distribution
 double gammaloglik(arma::vec vec3, double k, double adduplogvec, double addupvec) {	
 	return (k-1)*adduplogvec - vec3.n_elem  * (k * (1 + log(addupvec/(vec3.n_elem*k)) ) + lgamma(k) );
 }
+
+//Maximum likelihood estimation for gamma distribution
 // [[Rcpp::export]]
 double gammaShape (arma::vec vec2) {
+	//First, find the boundary to search from, based on slope.
 	double minBound = 0, maxBound = 2;
 	double midBound = (minBound + maxBound)/2 ;
 	double adduplogvec = 0,addupvec = 0;
@@ -44,6 +46,7 @@ double gammaShape (arma::vec vec2) {
 		LL1 = gammaloglik(vec2,midBound,adduplogvec,addupvec);
 		LL2 = gammaloglik(vec2,maxBound,adduplogvec,addupvec);
 	}
+	//Look for k using binary search.
 	if (LL1 > LL2) {
 		maxBound = midBound;
 		midBound = (minBound + maxBound)/2 ;
@@ -58,6 +61,7 @@ double gammaShape (arma::vec vec2) {
 			midBound = (minBound + maxBound)/2 ;
 		}
 	} else {
+		//Safety here. If likelihood can go up to infinity, we find the smallest k where the program can't tell the difference between LL1 and LL2 anymore.
 		while(LL1 == LL2) {
 			minBound = midBound/2;
 			maxBound = midBound;
@@ -76,16 +80,18 @@ double gammaShape (arma::vec vec2) {
 			LL2 = gammaloglik(vec2,maxBound,adduplogvec,addupvec);
 		}		
 	}
+	
 	return midBound;
 }
 
-
+//This function calculates F(lambda) (see article) based on the expression matrix and lambda.
 double SkewVarKurt	(const arma::mat& GeneExp, const double& lambda2) {
+	//vectors to store skewness, standard deviation, kurtosis and mean of each gene/feature.
 	arma::vec skewvec(GeneExp.n_rows);
 	arma::vec SDevvec(GeneExp.n_rows);
 	arma::vec kurtvec(GeneExp.n_rows);
 	arma::vec meanvec(GeneExp.n_rows);
-
+	//Objects to store the sums of variables that will be needed to perform linear regression.
 	double SumKurt = 0;
 	double SumSkew = 0;
 	double SumSD = 0;
@@ -112,10 +118,12 @@ double SkewVarKurt	(const arma::mat& GeneExp, const double& lambda2) {
 			M3 = M3 + term1 * delta_n * (n - 1) - 3 * delta_n * M2;
 			M2 = M2 + term1;
 		}
-		//Here, we can see that Variance is the second moment and Skewness is the third moment
+		//Here, calculate kurtosis, skewness and SD using 4th, 3rd and 2nd moments.
 		kurtvec.at(i) =  (GeneExp.n_cols * M4)/pow(M2,2) - 3;
 		skewvec.at(i) =  (sqrt(GeneExp.n_cols) * M3) / pow(M2,1.5);
 		SDevvec.at(i) =  sqrt(M2/(GeneExp.n_cols - 1));
+		
+		//Linear regression
 		//meanvec.at(i) = 1 + (mean - minMean)/range;
 		//meanvec.at(i) = 1 + i;
 		meanvec.at(i) = mean;
@@ -128,14 +136,14 @@ double SkewVarKurt	(const arma::mat& GeneExp, const double& lambda2) {
 		SumSDMean += SDevvec.at(i) * meanvec.at(i);
 		SumMeanSq += pow(meanvec.at(i),2);
 	}
-	//y = Mx + C, here are the M and C
+	//y = Mx + C, here are the M and C results of the linear regression
 	double kurtM = (GeneExp.n_rows * SumKurtMean - SumKurt * SumMean)/(GeneExp.n_rows * SumMeanSq - pow(SumMean,2) ) ;
 	double kurtC = (SumKurt - kurtM * SumMean)/GeneExp.n_rows;
 	double skewM = (GeneExp.n_rows * SumSkewMean - SumSkew * SumMean)/(GeneExp.n_rows * SumMeanSq - pow(SumMean,2) ) ;
 	double skewC = (SumSkew - skewM * SumMean)/GeneExp.n_rows;
 	double SDevM = (GeneExp.n_rows * SumSDMean - SumSD * SumMean)/(GeneExp.n_rows * SumMeanSq - pow(SumMean,2) );
 	
-	//integral of the linear equation from 1 to length of geneexp
+	//integral of the linear equation of skewness
 	double Skewzerointercept = -skewC/skewM;
 	double Skewintegral = 0;
 	skewM = skewM/2;
@@ -144,7 +152,7 @@ double SkewVarKurt	(const arma::mat& GeneExp, const double& lambda2) {
 	} else {
 		Skewintegral = abs(skewM * (meanvec.at(skewvec.n_elem-1) + meanvec.at(0)) + skewC);
 	}
-	
+	//integral of the linear equation of kurtosis
 	double Kurtzerointercept = -kurtC/kurtM;
 	double Kurtintegral = 0;
 	kurtM = kurtM/2;
@@ -156,7 +164,7 @@ double SkewVarKurt	(const arma::mat& GeneExp, const double& lambda2) {
 	return Skewintegral + Kurtintegral +  abs(SDevM);
 }
 
-
+//Given a range of lambda, this function finds lambda that minimizes F(lambda) (see article) based on the expression matrix by using binary search.
 double LocalSearch(const arma::mat& GeneExp, double minBound, double maxBound, double& smallest) {
 	minBound = round(minBound);
 	maxBound = round(maxBound);
@@ -165,6 +173,7 @@ double LocalSearch(const arma::mat& GeneExp, double minBound, double maxBound, d
 	double midBound = round((minBound + maxBound)/2);
 	double om = abs(SkewVarKurt(GeneExp, midBound));
 	double om2 = abs(SkewVarKurt(GeneExp,(midBound + 1)));
+	//Initialize smallestBound. This object is for the program to remember the smallest F(lambda) ever calculated. If the local minimal found is larger that this smallestBound, the boundaries will be reset and binary search will be rerun using a smaller boundary, with the smallestBound as center.
 	double smallestBound;
 	if (om > om2) {
 		minBound = midBound + 1;
@@ -180,12 +189,14 @@ double LocalSearch(const arma::mat& GeneExp, double minBound, double maxBound, d
 	while (smallestBound != midBound) {
 		//cout << "here1 " << smallestBound<<   " " << midBound << endl;
 		if (index > 0) {
+			//Reset boundary to center at smallestBound
 			minBound = round(smallestBound - (smallestBound - GminBound)/pow(2,index));
 			maxBound = round(smallestBound + (GmaxBound - smallestBound)/pow(2,index));
 			midBound = round((minBound + maxBound)/2);
 			//cout << minBound << " " << maxBound << endl;
 		}
 		index++;
+		//Binary search for smallest F(lambda)
 		while (minBound != midBound && maxBound != midBound) {
 			om = abs(SkewVarKurt(GeneExp, midBound));
 			om2 = abs(SkewVarKurt(GeneExp,midBound + 1));
@@ -208,9 +219,11 @@ double LocalSearch(const arma::mat& GeneExp, double minBound, double maxBound, d
 	return midBound;
 }
 
+//Using the LocalSearch function, performs iterated local search to find minimal lambda.
 // [[Rcpp::export]]
 double LocateLambda(const arma::mat& GeneExp, double search_exponent) {
 	//Boundary of ILS are minBound and maxBound
+	//Here, we define the range of lambda based on the dataset.
 	double leastMean = 0;
 	int fivepercent = GeneExp.n_cols / 20;
 	if (fivepercent < 1)
@@ -227,11 +240,12 @@ double LocateLambda(const arma::mat& GeneExp, double search_exponent) {
 	leastMean = leastMean/numnonzero;
 	double maxBound = 1/leastMean;
 	double minBound = 1;
-	//Find local min
+	
+	//Find local minima
 	double localminIntegral;
 	double localmin = LocalSearch(GeneExp, minBound, maxBound,localminIntegral);
 	
-	
+	//First, iterated local search starting on the left hand side of the local minima.  
 	//LHS search
 	int searchIndex = 1;
 	//1.perturbing the current local minimum;
@@ -271,6 +285,7 @@ double LocateLambda(const arma::mat& GeneExp, double search_exponent) {
 			}
 		}
 	}
+	//Lastly, iterated local search on the right hand side of the local minima.  
 	//RHS search
 	searchIndex = 1;
 	//1.perturbing the current local maximum;

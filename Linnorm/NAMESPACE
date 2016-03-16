@@ -1,5 +1,7 @@
 useDynLib(Linnorm)
-export(Linnorm, GammaSim, PoissonSim, LogNormSim, NBSim)
+export(Linnorm, Linnorm.limma, RnaXSim)
+import(MASS)
+import(limma)
 importFrom(Rcpp, evalCpp)
 importFrom(RcppArmadillo)
-importFrom(MASS)
+

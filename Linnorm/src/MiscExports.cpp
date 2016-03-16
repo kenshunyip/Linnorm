@@ -15,7 +15,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 using namespace std;
 using namespace Rcpp;
 
-// [[Rcpp::export]]
+
 double gammaShape (arma::vec vec2);
 RcppExport SEXP gammaShape(SEXP xSEXP) {
 BEGIN_RCPP
@@ -27,7 +27,6 @@ END_RCPP
 }
 
 
-// [[Rcpp::export]]
 double LocateLambda(const arma::mat& GeneExp, double search_exponent);
 RcppExport SEXP LocateLambda(SEXP xSEXP,SEXP ySEXP) {
 BEGIN_RCPP

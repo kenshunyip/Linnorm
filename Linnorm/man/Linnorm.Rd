@@ -2,7 +2,7 @@
 % Please edit documentation in R/Linnorm.R
 \name{Linnorm}
 \alias{Linnorm}
-\title{Linnorm Function}
+\title{Linnorm Normalization Function}
 \usage{
 Linnorm(datamatrix, showinfo = FALSE, method = "default",
   perturbation = 10, minZeroPortion = 2/3)
@@ -10,20 +10,32 @@ Linnorm(datamatrix, showinfo = FALSE, method = "default",
 \arguments{
 \item{datamatrix}{The matrix or data frame that contains your dataset. Each row is a feature (or Gene) and each column is a sample (or replicate). Undefined values such as NA are not supported.}
 
-\item{method}{"default" or "lambda" The program will output the transformed matrix if the method is "default". If the method is "lambda", the program will output a lambda value (normalizedExp = log1p(lambda * Matrix)).}
+\item{showinfo}{Logical. Show lambda value calculated. Defaults to FALSE.}
 
-\item{perturbation}{integer >=2. To search for an optimal minimal deviation parameter (please see the article), Linnorm uses the iterated local search algorithm which perturbs away from the initial local minimum. The range of the area searched in each perturbation is exponentially increased as the area get further away from the initial local minimum, which is determined by their index. This range is calculated by 10 * (perturbation ^ index).}
+\item{method}{"default" or "lambda" The program will output the transformed matrix if the method is "default". If the method is "lambda", the program will output a lambda value.}
 
-\item{minZeroPortion}{double >=0, <= 1. Featuress without at least this portion of non-zero values will not be used in the calculation of normalizing parameter. Defaults to 2/3.}
+\item{perturbation}{Integer >=2. To search for an optimal minimal deviation parameter (please see the article), Linnorm uses the iterated local search algorithm which perturbs away from the initial local minimum. The range of the area searched in each perturbation is exponentially increased as the area get further away from the initial local minimum, which is determined by their index. This range is calculated by 10 * (perturbation ^ index).}
+
+\item{minZeroPortion}{Double >=0, <= 1. Featuress without at least this portion of non-zero values will not be used in the calculation of normalizing parameter. Defaults to 2/3.}
 }
 \value{
-This function returns either a transformed data matrix or a lambda value. Please see the "method" parameter.
+This function returns either a transformed data matrix or a lambda value.
 }
 \description{
 This function performs the Linear model and normality based normalization method (Linnorm) for RNA-seq expression data or large scale count data.
 }
+\details{
+If method is default, Linnorm outputs a transformed expression matrix. For users who wish to work with lambda instead, the output is a single lambda value. Please note that users with the lambda value can obtain a normalized Linnorm dataset by: log1p(lambda * datamatrix). There is no need to rerun the program if a lambda is already calculated.
+}
 \examples{
-normalizedExp <- Linnorm(expMatrix, showinfo = "TRUE")
+#Obtain example matrix:
+library(seqc)
+SampleA <- ILM_aceview_gene_BGI[,grepl("A_",colnames(ILM_aceview_gene_BGI))]
+rownames(SampleA) <- ILM_aceview_gene_BGI[,2]
+#Extract a portion of the matrix for an example
+expMatrix <- SampleA[,1:3]
+normalizedExp <- Linnorm(expMatrix)
+normalizedExp <- Linnorm(expMatrix, method = "lambda")
 }
 \keyword{CPM}
 \keyword{Count}

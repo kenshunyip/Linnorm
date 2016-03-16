@@ -14,7 +14,7 @@ Linnorm_x.x.tar.gz contains the installation file for R. Source codes are locate
 #Installation:
 
 
-1) Download and put Linnorm_x.x.tar.gz to your working directory.
+1) Download and put Linnorm_0.99.0.tar.gz to your working directory.
 
 
 2) Inside your working directory, enter R environment.
@@ -32,4 +32,4 @@ Linnorm_x.x.tar.gz contains the installation file for R. Source codes are locate
 #Manual:
 
 
-Please see Linnorm_0.99.0_Manual.pdf
+Please see Linnorm_User_Manual.pdf
