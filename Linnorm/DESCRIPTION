@@ -1,23 +1,34 @@
 Package: Linnorm
 Type: Package
-Title: Linear model and normality based normalization method (Linnorm)
-Version: 0.99.0
-Date: 2016-03-09
-Author: Ken Shun Hang Yip <shunyip@bu.edu> <u3003188@connect.hku.hk>,
-	Pak Chung Sham <pcsham@hku.hk>, Junwen Wang <junwen@uw.edu>
+Title: Linear model and normality based transformation method (Linnorm)
+Version: 2.1.6
+Date: 2017-09-19
+Author: Shun Hang Yip <shunyip@bu.edu>, Panwen Wang <pwwang@pwwang.com>,
+    Jean-Pierre Kocher <Kocher.JeanPierre@mayo.edu>, Pak Chung Sham <pcsham@hku.hk>,
+    Junwen Wang <junwen@uw.edu>
 Maintainer: Ken Shun Hang Yip <shunyip@bu.edu>
-Description: A Normalization method for RNA-seq Expression data or large scale
-    count data for parametric tests. This package also includes several functions for the simulation of RNA-seq count data based on known distributions.
+Description: Linnorm is an R package for the analysis of RNA-seq, scRNA-seq, ChIP-seq count data or any large scale count data. It transforms such datasets for parametric tests.
+    In addition to the transformtion function (Linnorm), the following pipelines are implemented:
+        1. Library size/Batch effect normalization (Linnorm.Norm),
+        2. Cell subpopluation analysis and visualization using t-SNE or PCA K-means clustering or Hierarchical clustering (Linnorm.tSNE, Linnorm.PCA, Linnorm.HClust),
+        3. Differential expression analysis or differential peak detection using limma (Linnorm.limma),
+        4. Highly variable gene discovery and visualization (Linnorm.HVar),
+        5. Gene correlation network analysis and visualization (Linnorm.Cor),
+        6. Stable gene selection for scRNA-seq data; for users without or do not want to rely on spike-in genes (Linnorm.SGenes).
+        7. Data imputation. (under development) (Linnorm.DataImput).
+    Linnorm can work with raw count, CPM, RPKM, FPKM and TPM.
+    Additionally, the RnaXSim function is included for simulating RNA-seq data for the evaluation of DEG analysis methods.
+Depends: R(>= 3.4)
 License: MIT + file LICENSE
-Imports:
-    Rcpp (>= 0.12.2),
-    RcppArmadillo,
-    MASS,
-	limma
+Imports: Rcpp (>= 0.12.2), RcppArmadillo, fpc, vegan, mclust, apcluster, ggplot2, ellipse, limma, utils, statmod, MASS, igraph, grDevices, graphics, fastcluster, ggdendro, zoo, stats, amap, Rtsne, gmodels
 LinkingTo: Rcpp, RcppArmadillo
-Suggests: BiocStyle, knitr, rmarkdown, seqc
+Suggests: BiocStyle, knitr, rmarkdown, gplots, RColorBrewer, moments, testthat
 VignetteBuilder: knitr
 biocViews: Sequencing, ChIPSeq, RNASeq, DifferentialExpression,
-        GeneExpression, Genetics, Normalization, Software, Transcription, BatchEffect
+        GeneExpression, Genetics, Normalization, Software,
+        Transcription, BatchEffect, PeakDetection, Clustering,
+        Network, SingleCell
 NeedsCompilation: yes
-RoxygenNote: 5.0.1
+LazyData: false
+URL: http://www.jjwanglab.org/Linnorm/
+RoxygenNote: 6.0.1

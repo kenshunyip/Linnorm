@@ -2,40 +2,66 @@
 % Please edit documentation in R/Linnorm.R
 \name{Linnorm}
 \alias{Linnorm}
-\title{Linnorm Normalization Function}
+\title{Linnorm Normalizing Transformation Function}
 \usage{
-Linnorm(datamatrix, showinfo = FALSE, method = "default",
-  perturbation = 10, minZeroPortion = 2/3)
+Linnorm(datamatrix, RowSamples = FALSE, spikein = NULL,
+  spikein_log2FC = NULL, showinfo = FALSE, perturbation = "Auto",
+  Filter = FALSE, minNonZeroPortion = 0.75, L_F_p = 0.3173,
+  L_F_LC_Genes = "Auto", L_F_HC_Genes = 0.01, BE_F_p = 0.3173,
+  BE_F_LC_Genes = "Auto", BE_F_HC_Genes = 0.01, BE_strength = 0.5,
+  max_F_LC = 0.75, DataImputation = FALSE, ...)
 }
 \arguments{
-\item{datamatrix}{The matrix or data frame that contains your dataset. Each row is a feature (or Gene) and each column is a sample (or replicate). Undefined values such as NA are not supported.}
+\item{datamatrix}{The matrix or data frame that contains your dataset. Each row is a feature (or Gene) and each column is a sample (or replicate). Raw Counts, CPM, RPKM, FPKM or TPM are supported. Undefined values such as NA are not supported. It is not compatible with log transformed datasets.}
 
-\item{showinfo}{Logical. Show lambda value calculated. Defaults to FALSE.}
+\item{RowSamples}{Logical. In the datamatrix, if each row is a sample and each row is a feature, set this to TRUE so that you don't need to transpose it. Linnorm works slightly faster with this argument set to TRUE, but it should be negligable for smaller datasets. Defaults to FALSE.}
 
-\item{method}{"default" or "lambda" The program will output the transformed matrix if the method is "default". If the method is "lambda", the program will output a lambda value.}
+\item{spikein}{character vector. Names of the spike-in genes in the datamatrix. Defaults to NULL.}
 
-\item{perturbation}{Integer >=2. To search for an optimal minimal deviation parameter (please see the article), Linnorm uses the iterated local search algorithm which perturbs away from the initial local minimum. The range of the area searched in each perturbation is exponentially increased as the area get further away from the initial local minimum, which is determined by their index. This range is calculated by 10 * (perturbation ^ index).}
+\item{spikein_log2FC}{Numeric vector. Log 2 fold change of the spike-in genes. Defaults to NULL.}
 
-\item{minZeroPortion}{Double >=0, <= 1. Featuress without at least this portion of non-zero values will not be used in the calculation of normalizing parameter. Defaults to 2/3.}
+\item{showinfo}{Logical. Show algorithm running information. Defaults to FALSE.}
+
+\item{perturbation}{Integer >=2 or "Auto". To search for an optimal minimal deviation parameter (please see the article), Linnorm uses the iterated local search algorithm which perturbs away from the initial local minimum. The range of the area searched in each perturbation is exponentially increased as the area get further away from the initial local minimum, which is determined by their index. This range is calculated by 10 * (perturbation ^ index). Defaults to "Auto".}
+
+\item{Filter}{Logical. Should Linnorm filter the dataset in the end results? Defaults to FALSE.}
+
+\item{minNonZeroPortion}{Double >= 0.01, <= 0.95. Minimum non-Zero Portion Threshold. Genes not satisfying this threshold will be removed. For exmaple, if set to 0.3, genes without at least 30 percent of the samples being non-zero will be removed. Defaults to 0.75.}
+
+\item{L_F_p}{Double >= 0, <= 1. Filter genes with standard deviation and skewness less than this p value before applying Linnorm algorithm. Defaults to 0.3173.}
+
+\item{L_F_LC_Genes}{Double >= 0.01, <= 0.95 or Character "Auto". Filter this portion of the lowest expressing genes before applying Linnorm algorithm. It can be determined automatically by setting to "Auto". Defaults to "Auto".}
+
+\item{L_F_HC_Genes}{Double >= 0.01, <= 0.95. Filter this portion of the highest expressing genes before applying Linnorm algorithm. Defaults to 0.01.}
+
+\item{BE_F_p}{Double >=0, <= 1. Filter genes with standard deviation and skewness less than this p value before applying Linnorm's batch effect normalization algorithm. Defaults to 0.3173.}
+
+\item{BE_F_LC_Genes}{Double >= 0.01, <= 0.95 or Character "Auto". Filter this portion of the lowest expressing genes before applying Linnorm's batch effect normalization algorithm. It can be determined automatically by setting to "Auto". Defaults to "Auto".}
+
+\item{BE_F_HC_Genes}{Double >= 0.01, <= 0.95. Filter this portion of the highest expressing genes before applying Linnorm's batch effect normalization algorithm. Defaults to 0.01.}
+
+\item{BE_strength}{Double >0, <= 1. Before Linnorm transformation, how strongly should Linnorm normalize batch effects? Defaults to 0.5.}
+
+\item{max_F_LC}{Double >=0, <= 0.95. When L_F_LC or B_F_LC is set to auto, this is the maximum threshold that Linnorm would assign. Defaults to 0.75.}
+
+\item{DataImputation}{Logical. Perform data imputation on the dataset after transformation. Defaults to FALSE.}
+
+\item{...}{place holder for any new arguments.}
 }
 \value{
-This function returns either a transformed data matrix or a lambda value.
+This function returns a transformed data matrix.
 }
 \description{
-This function performs the Linear model and normality based normalization method (Linnorm) for RNA-seq expression data or large scale count data.
+This function performs the Linear model and normality based transformation method (Linnorm) for (sc)RNA-seq expression data or large scale count data.
 }
 \details{
-If method is default, Linnorm outputs a transformed expression matrix. For users who wish to work with lambda instead, the output is a single lambda value. Please note that users with the lambda value can obtain a normalized Linnorm dataset by: log1p(lambda * datamatrix). There is no need to rerun the program if a lambda is already calculated.
+This function normalizes and transforms the input dataset using the Linnorm algorithm.
 }
 \examples{
 #Obtain example matrix:
-library(seqc)
-SampleA <- ILM_aceview_gene_BGI[,grepl("A_",colnames(ILM_aceview_gene_BGI))]
-rownames(SampleA) <- ILM_aceview_gene_BGI[,2]
-#Extract a portion of the matrix for an example
-expMatrix <- SampleA[,1:3]
-normalizedExp <- Linnorm(expMatrix)
-normalizedExp <- Linnorm(expMatrix, method = "lambda")
+data(LIHC)
+#Transformation:
+transformedExp <- Linnorm(LIHC)
 }
 \keyword{CPM}
 \keyword{Count}
@@ -49,4 +75,3 @@ normalizedExp <- Linnorm(expMatrix, method = "lambda")
 \keyword{TPM}
 \keyword{normalization}
 \keyword{transformation}
-

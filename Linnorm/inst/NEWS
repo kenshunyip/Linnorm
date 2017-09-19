@@ -1,5 +1,91 @@
+20th, March, 2017
+    o Development 1.99.18
+        o Bug fix on BE_strength when it is set to zero.
+        o Allow Linnorm.Norm to use spikein.
+
+13th, February, 2017
+    o Development 1.99.16
+        o Reorganized Vignettes
+        o Linnorm.limma's noINF fold change calculation now adds estimated count of one instead of adding 1 XPM.
+
+9th, February, 2017
+    o Development 1.99.11 to 1.99.15
+        o Fixed a bug in minNonZeroPortion.
+        o Edited comments.
+        o Added more unit tests.
+        o Coloring oF HClust's labels should now match their cluster.
+    o Release 1.2.10
+        o Fixed a bug in minNonZeroPortion.
+
+30th, January, 2017
+    o Development 1.99.10
+        o Bug Fixes.
+        o Added Linnorm.SGenes function.
+            o This function selects stable genses from scRNA-seq data for users without spike-ins or do not want to rely on spike-ins.
+
+26th, January, 2017
+    o Development 1.99.8
+        o Algorithm is now optimized for speed.
+        o Added unit tests.
+        o Compressed all datasets with the smallest possible format.
+        o Added data imputation function. In the manual, we added this function with the note "In development".
+        o Changed parameters in HVar function to make it less stringent.
+        o Allow PCA and HClust to utilize data imputation. Since these two tests are more prone to zero counts, we find that data imputation can help improve their performances.
+            o Note that t-SNE does not need data imputaiton and is the preferred method for cell subpopulation analysis.
+        o PCA is speeded up using gmodels library.
+    o Release 1.2.8
+        o We now formally declare Linnorm version 1 to be deprecated.
+        o Release 1.2.7 and 1.2.8 are already implemented with many modifications that are intended for Linnorm 2. Still, Linnorm version 1.99.8+ will allow more functionalities. We strongly suggest using the newer version.
+
+17th, January, 2017
+    o Development 1.99.7, Release 1.2.7
+        o Finally, build is successful on bioconductor.
+        o minZeroPortoin argument is renamed into minNonZeroPortion (minimum non-zero portion filtering threshold), to better reflect its real function.
+
+2nd, January, 2017
+    o Development 1.99.0
+        o Improved Linnorm's algorithm
+            o Added data filtering step
+            o Added normalization step
+        o Added new functions for normalization, t-SNE clustering.
+        o Almost all functions are updated.
+    o Release 1.2.1
+        o It now matches 1.99.0 as much as possible.
+
+6th, October, 2016
+    o Development 1.1.16:
+        o Removed warnings from loading package.
+        o Fixed and updated vignettes based on Bioc Staff recommendation.
+        o Implemented Linnorm.HClust function.
+        o Updated Linnorm.Cor function for clustering functionalities.
+
+27th, August, 2016
+    o Development 1.1.14:
+        o Updated Linnorm.Cor function to allow more functionalities.
+        o Updated vignettes on Linnorm.Cor.
+        o Updated reference manual.
+    o Release: Fixed building error in 1.0.5, thus becoming 1.0.6.
+
+23th, August, 2016
+    o Critical update for development version 1.1.13:
+        o Added Linnorm.HVar, Linnorm.Cor functions for highly variable gene discovery and gene correlation network analysis.
+        o Added input argument for users who wish to reuse Linnorm transformed datasets in various functions.
+        o Added keepAll argument for users to control whether filtering would remove some genes from the results.
+    o Author list update in release 1.0.5.
+
+17th, August, 2016
+    o Updated author list.
+    o Error preventing checks now implemented in release 1.0.4.
+    o Critical: Fixed a bug that might cause Linnorm to underestimate fold change.
+
+21st, July, 2016
+    o Several new updates for the last few versions:
+    o PCA analysis pipeline has been added to Linnorm.
+    o Error preventing checks have been implemented, as suggested by Dr. Jing Qin. Thanks.
+    o Vignetes updated and its graphics are fixed.
+
 16th, March, 2016
-	o Version 0.99.0 is going to be submitted to Bioconductor Today.
+    o Version 0.99.0 is going to be submitted to Bioconductor Today.
 
 10th, March, 2016
-	o Congratulations, this is the first news for version 0.99.0.
+    o Congratulations, this is the first news for version 0.99.0.

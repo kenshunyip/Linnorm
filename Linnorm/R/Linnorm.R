@@ -1,953 +1,221 @@
-#' Linnorm Normalization Function
+#' Linnorm Normalizing Transformation Function
 #'
-#' This function performs the Linear model and normality based normalization method (Linnorm) for RNA-seq expression data or large scale count data.
-#' @param datamatrix	The matrix or data frame that contains your dataset. Each row is a feature (or Gene) and each column is a sample (or replicate). Undefined values such as NA are not supported.
-#' @param showinfo Logical. Show lambda value calculated. Defaults to FALSE.
-#' @param method	"default" or "lambda" The program will output the transformed matrix if the method is "default". If the method is "lambda", the program will output a lambda value.
-#' @param minZeroPortion Double >=0, <= 1. Featuress without at least this portion of non-zero values will not be used in the calculation of normalizing parameter. Defaults to 2/3.
-#' @param perturbation Integer >=2. To search for an optimal minimal deviation parameter (please see the article), Linnorm uses the iterated local search algorithm which perturbs away from the initial local minimum. The range of the area searched in each perturbation is exponentially increased as the area get further away from the initial local minimum, which is determined by their index. This range is calculated by 10 * (perturbation ^ index).
-#' @details  If method is default, Linnorm outputs a transformed expression matrix. For users who wish to work with lambda instead, the output is a single lambda value. Please note that users with the lambda value can obtain a normalized Linnorm dataset by: log1p(lambda * datamatrix). There is no need to rerun the program if a lambda is already calculated.
-#' @return This function returns either a transformed data matrix or a lambda value.
+#' This function performs the Linear model and normality based transformation method (Linnorm) for (sc)RNA-seq expression data or large scale count data.
+#' @param datamatrix	The matrix or data frame that contains your dataset. Each row is a feature (or Gene) and each column is a sample (or replicate). Raw Counts, CPM, RPKM, FPKM or TPM are supported. Undefined values such as NA are not supported. It is not compatible with log transformed datasets.
+#' @param RowSamples	Logical. In the datamatrix, if each row is a sample and each row is a feature, set this to TRUE so that you don't need to transpose it. Linnorm works slightly faster with this argument set to TRUE, but it should be negligable for smaller datasets. Defaults to FALSE.
+#' @param spikein	character vector. Names of the spike-in genes in the datamatrix. Defaults to NULL.
+#' @param spikein_log2FC	Numeric vector. Log 2 fold change of the spike-in genes. Defaults to NULL.
+#' @param showinfo	Logical. Show algorithm running information. Defaults to FALSE.
+#' @param perturbation	Integer >=2 or "Auto". To search for an optimal minimal deviation parameter (please see the article), Linnorm uses the iterated local search algorithm which perturbs away from the initial local minimum. The range of the area searched in each perturbation is exponentially increased as the area get further away from the initial local minimum, which is determined by their index. This range is calculated by 10 * (perturbation ^ index). Defaults to "Auto".
+#' @param Filter	Logical. Should Linnorm filter the dataset in the end results? Defaults to FALSE.
+#' @param minNonZeroPortion Double >= 0.01, <= 0.95. Minimum non-Zero Portion Threshold. Genes not satisfying this threshold will be removed. For exmaple, if set to 0.3, genes without at least 30 percent of the samples being non-zero will be removed. Defaults to 0.75.
+#' @param L_F_p	Double >= 0, <= 1. Filter genes with standard deviation and skewness less than this p value before applying Linnorm algorithm. Defaults to 0.3173.
+#' @param L_F_LC_Genes	Double >= 0.01, <= 0.95 or Character "Auto". Filter this portion of the lowest expressing genes before applying Linnorm algorithm. It can be determined automatically by setting to "Auto". Defaults to "Auto".
+#' @param L_F_HC_Genes	Double >= 0.01, <= 0.95. Filter this portion of the highest expressing genes before applying Linnorm algorithm. Defaults to 0.01.
+#' @param BE_F_p	Double >=0, <= 1. Filter genes with standard deviation and skewness less than this p value before applying Linnorm's batch effect normalization algorithm. Defaults to 0.3173.
+#' @param BE_F_LC_Genes	Double >= 0.01, <= 0.95 or Character "Auto". Filter this portion of the lowest expressing genes before applying Linnorm's batch effect normalization algorithm. It can be determined automatically by setting to "Auto". Defaults to "Auto".
+#' @param BE_F_HC_Genes	Double >= 0.01, <= 0.95. Filter this portion of the highest expressing genes before applying Linnorm's batch effect normalization algorithm. Defaults to 0.01.
+#' @param BE_strength	Double >0, <= 1. Before Linnorm transformation, how strongly should Linnorm normalize batch effects? Defaults to 0.5.
+#' @param max_F_LC	Double >=0, <= 0.95. When L_F_LC or B_F_LC is set to auto, this is the maximum threshold that Linnorm would assign. Defaults to 0.75.
+#' @param DataImputation	Logical. Perform data imputation on the dataset after transformation. Defaults to FALSE.
+#' @param ... place holder for any new arguments.
+#' @details  This function normalizes and transforms the input dataset using the Linnorm algorithm.
+#' @return This function returns a transformed data matrix.
 #' @keywords Linnorm RNA-seq Raw Count Expression RPKM FPKM TPM CPM normalization transformation Parametric
 #' @export
 #' @examples
 #' #Obtain example matrix:
-#' library(seqc)
-#' SampleA <- ILM_aceview_gene_BGI[,grepl("A_",colnames(ILM_aceview_gene_BGI))]
-#' rownames(SampleA) <- ILM_aceview_gene_BGI[,2]
-#' #Extract a portion of the matrix for an example
-#' expMatrix <- SampleA[,1:3]
-#' normalizedExp <- Linnorm(expMatrix)
-#' normalizedExp <- Linnorm(expMatrix, method = "lambda")
+#' data(LIHC)
+#' #Transformation:
+#' transformedExp <- Linnorm(LIHC)
 #' @import
 #' Rcpp
 #' RcppArmadillo
-Linnorm <- function(datamatrix, showinfo = FALSE, method="default",perturbation=10, minZeroPortion=2/3) {
+Linnorm <- function(datamatrix, RowSamples = FALSE, spikein = NULL, spikein_log2FC = NULL, showinfo = FALSE, perturbation="Auto", Filter=FALSE, minNonZeroPortion = 0.75, L_F_p = 0.3173, L_F_LC_Genes = "Auto", L_F_HC_Genes = 0.01, BE_F_p = 0.3173, BE_F_LC_Genes = "Auto", BE_F_HC_Genes = 0.01, BE_strength = 0.5, max_F_LC=0.75, DataImputation = FALSE, ...) {
+	#Linnorm transformation
+	#Author: (Ken) Shun Hang Yip <shunyip@bu.edu>
+	
 	#data checking
-	expdata <- as.matrix(datamatrix)
-	if (length(expdata[1,]) < 2) {
-		stop("Number of samples is less than 2.")
-	}
-	if (length(expdata[,1]) < 10) {
-		stop("Number of features is too small.")
-	}
-	if (perturbation < 2) {
-		stop("perturbation is too small.")
-	}
-	if (method != "default" && method != "lambda") {
-		stop("Invalid algorithm value.")
-	}
-	if (minZeroPortion >1 || minZeroPortion < 0) {
-		stop("Invalid minZeroPortion.")
-	}
+	datamatrix <- as.matrix(datamatrix)
 	#Step 1: Relative Expression
 	#Turn it into relative expression
-	for (i in seq_along(expdata[1,])) {
-		expdata[,i] <- expdata[,i]/sum(expdata[,i])
+	#Note that expdata does not have colnames and rownames now
+	RN <- 0
+	CN <- 0
+	if (RowSamples) {
+		RN <- rownames(datamatrix)
+		CN <- colnames(datamatrix)
+		datamatrix <- XPM(datamatrix)
+	} else {
+		CN <- rownames(datamatrix)
+		RN <- colnames(datamatrix)
+		datamatrix <- tXPM(datamatrix)
 	}
-	#Save the original dataset before trimming.
-	datamatrix <- expdata
-	expdata <- expdata[order(rowMeans(expdata)),]	
-	if (method == "default") {		
-		#trim outliers
-		expdata <- expdata[rowSums(expdata != 0) >= (length(expdata[1,]) * minZeroPortion),]
-		
-		X <- LocateLambda(expdata,perturbation)
-		if (showinfo) {
-			message("Lambda is ", X,".",appendLF=TRUE)
-			flush.console()
+	colnames(datamatrix) <- CN
+	rownames(datamatrix) <- RN
+	
+	if (length(datamatrix[,1]) < 3) {
+		stop("Number of samples is less than 3.")
+	}
+	if (length(datamatrix[1,]) < 500) {
+		stop("Number of features is too small.")
+	}
+	if (length(spikein) != length(spikein_log2FC)) {
+		if (length(spikein_log2FC) == 0) {
+			spikein_log2FC <- rep(0, length(spikein))
+		} else {
+			stop("spikein length must be the same as spikein_log2FC.")
 		}
-		return( log1p(datamatrix * X) )
+	} else {
+		keep <- which(spikein_log2FC == 0)
+		spikein <- spikein[keep]
 	}
-	if (method == "lambda") {
-		#trim outliers
-		expdata <- expdata[rowSums(expdata != 0) >= (length(expdata[1,]) * minZeroPortion),]
-		
-		X <- LocateLambda(expdata,perturbation)
-		return( X )
+	if (perturbation < 2 && perturbation != "Auto") {
+		stop("Invalid perturbation.")
 	}
-}
-
-
-#' Linnorm-limma pipeline for Differentially Expression Analysis
-#'
-#' This function first performs Linnorm normalization on the dataset. Then, it will perform limma for DEG analysis. Finally, it will correct fold change outputs from limma results, that will be wrong otherwise. Please cite both Linnorm and limma when you use this function for publications.
-#' @param datamatrix	The matrix or data frame that contains your dataset. Each row is a feature (or Gene) and each column is a sample (or replicate). Undefined values such as NA are not supported.
-#' @param design	A design matrix required for limma. Please see limma's documentation or our vignettes for more detail.
-#' @param output Character. "DEResults" or "Both". Set to "DEResults" to output a matrix that contains Differential Expression Analysis Results. Set to "Both" to output a list that contains both Differential Expression Analysis Results and the transformed data matrix.
-#' @param noINF	Logical. Prevent generating INF in the fold change column by using Linnorm's lambda and adding one. If it is set to FALSE, INF will be generated if one of the conditions has zero expression. Defaults to TRUE. 
-#' @param showinfo Logical. Show lambda value calculated. Defaults to FALSE.
-#' @param minZeroPortion Double >=0, <= 1. Featuress without at least this portion of non-zero values will not be used in the calculation of normalizing parameter. Defaults to 2/3.
-#' @param perturbation Integer >=2. To search for an optimal minimal deviation parameter (please see the article), Linnorm uses the iterated local search algorithm which perturbs away from the initial local minimum. The range of the area searched in each perturbation is exponentially increased as the area get further away from the initial local minimum, which is determined by their index. This range is calculated by 10 * (perturbation ^ index).
-#' @param robust Logical. In the eBayes function of Limma, run with robust setting with TRUE or FALSE. Defaults to TRUE.
-#' @details  This function performs both Linnorm and limma for users who are interested in differential expression analysis. Please note that if you directly use a Linnorm Nomralized dataset with limma, the output fold change and average expression with be wrong. (p values and adj.pvalues will be fine.) This is because the voom-limma pipeline assumes input to be in raw counts. This function is written to fix this problem.
-#' @return If output is set to "DEResults", this function will output a matrix with Differntial Expression Analysis Results with the following columns:
-##' \itemize{
-##'  \item{logFC:}{ Log 2 Fold Change}
-##'  \item{XPM:}{ Average Expression. If input is raw count or CPM, this column has the CPM unit. If input is RPKM, FPKM or TPM, this column has the TPM unit.}
-##'  \item{t:}{ moderated t-statistic}
-##'  \item{P.Value:}{ p value}
-##'  \item{adj.P.Val:}{ Adjusted p value. This is also called False Discovery Rate or q value.}
-##'  \item{B:}{ log odds that the feature is differential}
-##' }
-#' @return If output is set to Both, this function will output a list with the following objects:
-##' \itemize{
-##'  \item{DEResults:}{ Differntial Expression Analysis Results as described above.}
-##'  \item{TMatrix:}{ A Linnorm Normalized Expression Matrix.}
-##' }
-#' @keywords Linnorm RNA-seq Raw Count Expression RPKM FPKM TPM CPM normalization transformation Parametric limma
-#' @export
-#' @examples
-#' #Obtain example matrix:
-#' library(seqc)
-#' SampleA <- ILM_aceview_gene_BGI[,grepl("A_",colnames(ILM_aceview_gene_BGI))]
-#' rownames(SampleA) <- ILM_aceview_gene_BGI[,2]
-#' SampleB <- ILM_aceview_gene_BGI[,grepl("B_",colnames(ILM_aceview_gene_BGI))]
-#' rownames(SampleB) <- ILM_aceview_gene_BGI[,2]
-#' #Extract a portion of the matrix for an example
-#' expMatrix <- cbind(SampleA[,1:3], SampleB[,1:3])
-#' designmatrix <- c(1,1,1,2,2,2)
-#' designmatrix <- model.matrix(~ 0+factor(designmatrix))
-#' colnames(designmatrix) <- c("group1", "group2")
-#' rownames(designmatrix) <- colnames(expMatrix)
-#' 
-#' #Example 1
-#' DEGResults <- Linnorm.limma(expMatrix, designmatrix)
-#' #Example 2
-#' DEGResults <- Linnorm.limma(expMatrix, designmatrix, output="Both")
-Linnorm.limma <- function(datamatrix, design=NULL, output="DEResults", noINF=TRUE, showinfo = FALSE, perturbation=10, minZeroPortion=2/3, robust=TRUE) {
-	expdata <- as.matrix(datamatrix)
-	if (length(expdata[1,]) < 2) {
-		stop("Number of samples is less than 2.")
+	if (minNonZeroPortion > 1 || minNonZeroPortion < 0) {
+		stop("Invalid minNonZeroPortion.")
 	}
-	if (length(expdata[,1]) < 10) {
-		stop("Number of features is too small.")
+	if (L_F_p >1 || L_F_p < 0) {
+		stop("Invalid L_F_p.")
 	}
-	if (perturbation < 2) {
-		stop("perturbation is too small.")
+	if (L_F_LC_Genes > 0.95 || L_F_LC_Genes < 0.01) {
+		if (L_F_LC_Genes != "Auto") {
+			stop("Invalid L_F_LC_Genes.")
+		}
 	}
-	if (minZeroPortion >1 || minZeroPortion < 0) {
-		stop("Invalid minZeroPortion.")
+	if (L_F_HC_Genes > 0.95 || L_F_HC_Genes < 0.01) {
+		stop("Invalid L_F_HC_Genes.")
 	}
-	if (is.null(design)) {
-		stop("design is null.")
+	if (BE_F_p > 1 || BE_F_p < 0) {
+		stop("Invalid BE_F_p.")
 	}
-
+	if (BE_F_LC_Genes > 0.95 || BE_F_LC_Genes < 0.01) {
+		if (BE_F_LC_Genes != "Auto") {
+			stop("Invalid BE_F_LC_Genes.")
+		}
+	}
+	if (BE_F_HC_Genes > 0.95 || BE_F_HC_Genes < 0.01) {
+		stop("Invalid BE_F_HC_Genes.")
+	}
+	if (BE_strength > 1 | BE_strength <= 0) {
+		stop("Invalid BE_strength.")
+	}
+	if (anyNA(datamatrix)) {
+		stop("Dataset contains NA.")
+	}
+	if (sum(which(datamatrix < 0)) != 0) {
+		stop("Dataset contains negative number.")
+	}
+	if (max_F_LC > 0.95 || max_F_LC < 0) {
+		stop("Invalid max_F_LC.")
+	}
+	if (!is.logical(showinfo)){
+		stop("Invalid showinfo.")
+	}
+	if (!is.logical(RowSamples)){
+		stop("Invalid RowSamples.")
+	}
+	if (!is.logical(Filter)){
+		stop("Invalid Filter.")
+	}
+	if (!is.logical(DataImputation)){
+		stop("Invalid DataImputation.")
+	}
 	
-	#Step 1: Relative Expression
-	#Turn it into relative expression
-	for (i in seq_along(expdata[1,])) {
-		expdata[,i] <- expdata[,i]/sum(expdata[,i])
+	#Find maxBound
+	TheMean <- NZcolMeans(datamatrix)
+	MeanOrder <- order(TheMean, decreasing = FALSE)
+	numZero <- sum(TheMean == 0)
+	fivepercent <- floor(0.05 * ncol(datamatrix)) + 1
+	nonZero <- datamatrix[,MeanOrder[numZero:(numZero +fivepercent)]][which(datamatrix[,MeanOrder[numZero:(numZero +fivepercent)]] != 0)]
+	maxBound <- length(nonZero)/sum(nonZero)
+	#Get filter low count genes threhsold
+	Keep <- 0
+	if (nrow(datamatrix) * minNonZeroPortion < 3) {
+		Keep <- which(colSums(datamatrix != 0) >= 3)
+	} else {
+		if (minNonZeroPortion == 0 || minNonZeroPortion == 1) {
+			Keep <- which(colSums(datamatrix != 0) >= nrow(datamatrix) * minNonZeroPortion)
+		} else {
+			Keep <- which(colSums(datamatrix != 0) > nrow(datamatrix) * minNonZeroPortion)
+		}
 	}
-	#Save the original dataset before trimming.
-	datamatrix <- expdata
-	expdata <- expdata[order(rowMeans(expdata)),]
-	#trim outliers
-	expdata <- expdata[rowSums(expdata != 0) >= (length(expdata[1,]) * minZeroPortion),]
-	
-	X <- LocateLambda(expdata,perturbation)
+	if (length(Keep) < 200) {
+		stop("Given the current minNonZeroPortion threshold, the number of remaining feature (less than 200) is too small.")
+	}
+	LC_Threshold <- 0
+	if (BE_F_LC_Genes == "Auto" || L_F_LC_Genes == "Auto") {
+		LC_Threshold <- FindLCT(datamatrix[,Keep], maxBound)
+		if (LC_Threshold > max_F_LC) {
+			if (showinfo) {
+				message(paste("Filter low count gene threshold is ", LC_Threshold, ". It is larger than max_F_LC, ", max_F_LC, ", which is now used.", sep=""))
+				LC_Threshold <- max_F_LC
+			}
+		}
+		if (BE_F_LC_Genes == "Auto") {
+			BE_F_LC_Genes <- LC_Threshold
+		}
+		if (L_F_LC_Genes == "Auto") {
+			L_F_LC_Genes <- LC_Threshold
+		}
+		if (showinfo) {
+			message(paste("Filter low count genes threshold is set to ", LC_Threshold, sep=""),appendLF=TRUE)
+		}
+	}
+	if (L_F_LC_Genes + L_F_HC_Genes > 0.95){
+		L_F_HC_Genes <- 0.01
+		if (showinfo) {
+			message(paste("L_F_HC_Genes Reset to ", L_F_HC_Genes, sep=""),appendLF=TRUE)
+		}
+	}
+	if (BE_F_LC_Genes + BE_F_HC_Genes > 0.95){
+		BE_F_HC_Genes <- 0.01
+		if (showinfo) {
+			message(paste("BE_F_HC_Genes Reset to ", BE_F_HC_Genes, sep=""),appendLF=TRUE)
+		}
+	}
+	#Filter dataset and calculate lambda
+	FilteredData <- FirstFilter(datamatrix, minNonZeroPortion, L_F_p = L_F_p, L_F_LC_Genes = L_F_LC_Genes, L_F_HC_Genes = L_F_HC_Genes, spikein = spikein)
+	if (perturbation =="Auto") {
+		perturbation <- round(maxBound^(1/3))+1
+	}
+	lambda <- LocateLambda(FilteredData, perturbation, maxBound)
+	#Normalization
+	if (BE_strength > 0) {
+		datamatrix <- BatchEffectLinnorm1(datamatrix * lambda, minNonZeroPortion, BE_F_LC_Genes = BE_F_LC_Genes, BE_F_HC_Genes = BE_F_HC_Genes, BE_F_p = BE_F_p, BE_strength = BE_strength, spikein=spikein)
+		datamatrix <- log1p(datamatrix)
+	} else {
+		datamatrix <- log1p(datamatrix * lambda)
+	}
+	x <- list(...)
+	if (!is.null(x[['Internal']])) {
+		Filter = TRUE
+		LC_Threshold <- round(LC_Threshold * (1 - x$FG_Recov),2)
+		minNonZeroPortion <- x$MZP
+	}
+	if (Filter || DataImputation) {
+		if (Filter) {
+			datamatrix <- datamatrix[,order(NZcolMeans(datamatrix),decreasing=FALSE)]
+			datamatrix <- datamatrix[,colSums(datamatrix != 0) >= nrow(datamatrix) * minNonZeroPortion]
+			Start <- floor(ncol(datamatrix) * LC_Threshold + 1)
+			End <- ncol(datamatrix)
+			Keep <- Start:End
+			datamatrix <- datamatrix[,Keep]
+		}
+		if (DataImputation) {
+			datamatrix <- Linnorm.DataImput(datamatrix, RowSamples=TRUE,showinfo=showinfo, ...)
+		}
+	}
 	if (showinfo) {
-		message("Lambda is ", X,".",appendLF=TRUE)
+		message("Lambda is ", lambda,".",appendLF=TRUE)
+		message("perturbation is ", perturbation,".",appendLF=TRUE)
 		flush.console()
 	}
-	
-	expdata <- log1p(datamatrix * X)
-	
-	#adjust design for further analysis
-	CN <- c()
-	for (i in seq_along(design[1,])) {
-		CN <- c(CN, paste("group",i,sep=""))
-	}
-	colnames(design) <- CN
-	fit2 <- lmFit(expdata,design)
-	if (length(design[1,]) == 2) {
-		contrast.matrix <- makeContrasts("group1-group2", levels=design)
-	} else if (length(design[1,]) == 3) {
-		contrast.matrix <- makeContrasts("group1-group2","group1-group3","group2-group3", levels=design)
-	} else if (length(design[1,]) == 4) {
-		contrast.matrix <- makeContrasts("group1-group2","group1-group3","group1-group4","group2-group3","group2-group4","group3-group4", levels=design)
-	} else if (length(design[1,]) == 5) {
-		contrast.matrix <- makeContrasts("group1-group2","group1-group3","group1-group4","group1-group5","group2-group3","group2-group4","group2-group5","group3-group4","group3-group5","group4-group5", levels=design)
-	} else if (length(design[1,]) == 6) {
-		contrast.matrix <- makeContrasts("group1-group2","group1-group3","group1-group4","group1-group5","group1-group6","group2-group3","group2-group4","group2-group5","group2-group6","group3-group4","group3-group5","group3-group6","group4-group5","group4-group6","group5-group6", levels=design)
+	if (RowSamples) {
+		return (datamatrix)
 	} else {
-		stop("Error: The number of columns in design matrix is larger than 6.")
-	}
-	fit2 <- contrasts.fit(fit2, contrast.matrix)
-	fit2 <- eBayes(fit2,robust=robust)
-	limmaResults <- topTable(fit2, number=length(fit2$p.value), adjust.method="BH")
-	datamatrix <- datamatrix[rownames(limmaResults),]
-	if (length(design[1,]) == 2) {
-		set1 <- as.numeric(which(design[,1] == 1))
-		set2 <- as.numeric(which(design[,1] != 1))
-		limmaResults[,2] <- unlist(apply(datamatrix,1,mean)) * 1000000
-		if (noINF) {
-			datamatrix <- datamatrix * X + 1
-			limmaResults[,1] <- unlist(apply(datamatrix,1,function(x){return(log(mean(x[set1])/mean(x[set2] ),2) )}))
-		} else {
-			limmaResults[,1] <- unlist(apply(datamatrix,1,function(x){return(log(mean(x[set1])/mean(x[set2]),2) )}))
-		}		
-		colnames(limmaResults)[2] <- "XPM"
-	} else {
-		limmaResults[,2] <- unlist(apply(datamatrix,1,mean)) * 1000000
-		colnames(limmaResults)[2] <- "XPM"
-		limmaResults <- limmaResults[,-c(1)]
-	}
-	if (output=="DEResults") {
-		return (limmaResults)
-	}
-	if (output=="Both") {
-		listing <- list(limmaResults, expdata)
-		results <- setNames(listing, c("DEResults", "TMatrix"))
-		return (results)
-	}
-		
-	
-}
-
-
-#' This function simulates a RNA-seq dataset based on a given distribution.
-#' @param thisdata Matrix:	The matrix or data frame that contains your dataset. Each row is a gene and each column is a replicate. Undefined values such as NA are not supported. This program assumes that all columns are replicates of the same sample.
-#' @param distribution Character: Defaults to "Poisson". This parameter controls the output distribution of the simulated RNA-seq dataset. It can be one of "Gamma" (Gamma distribution), "Poisson" (Poisson distribution), "LogNorm" (Log Normal distribution) or "NB" (Negative Binomial distribution).
-#' @param NumRep Integer: The number of replicates. This is half of the number of output samples. Defaults to 3.
-#' @param NumDiff Integer: The number of Differentially Changed Features. Defaults to 5000.
-#' @param NumFea Integer: The number of Total Features. Defaults to 20000.
-#' @param showinfo Logical: should we show data information on the console? Defaults to FALSE.
-#' @param MaxLibSizelog2FC Double: The maximum library size difference from the mean that is allowed, in terms of log 2 fold change. Set to 0 to prevent program from generating library size differences. Defaults to 0.5.
-#' @return This function returns a list that contains a matrix of count data in integer raw count and a vector that shows which genes are differentially expressed. In the matrix, each row is a gene and each column is a replicate. The first NumRep (see parameter) of the columns belong to sample 1, and the last NumRep (see parameter) of the columns belong to sample 2. There will be NumFea (see parameter) number of rows.
-#' @keywords RNA-seq Raw Count Expression Simulation Gamma distribution Simulate Poisson "Log Normal" "Negative Binomial"
-#' @export
-#' @examples
-#' #Obtain example matrix:
-#' library(seqc)
-#' SampleA <- ILM_aceview_gene_BGI[,grepl("A_",colnames(ILM_aceview_gene_BGI))]
-#' rownames(SampleA) <- ILM_aceview_gene_BGI[,2]
-#' #Extract a portion of the matrix for an example
-#' expMatrix <- SampleA[,1:10]
-#' simulateddata <- RnaXSim(expMatrix, distribution="NB", NumRep=3, NumDiff = 500, NumFea = 3000)
-RnaXSim <- function(thisdata, distribution="Poisson", NumRep=3, NumDiff = 5000, NumFea = 20000, showinfo=FALSE, MaxLibSizelog2FC=0.5) {
-	thisdata <- na.omit(as.matrix(thisdata))
-	if (distribution != "Gamma" && distribution != "Poisson" && distribution != "LogNorm" && distribution != "NB") {
-		stop("Invalid distribution.")
-	}
-	if (NumDiff < 0) {
-		stop("Invalid NumDiff value.")
-	}
-	if (NumRep < 2) {
-		stop("Invalid NumRep value.")
-	}
-	if (NumFea < 0) {
-		stop("Invalid NumFea value.")
-	}
-	#Turn it into relative expression
-	LibSize <- colSums(thisdata)
-	for (i in seq_along(thisdata[1,])) {
-		thisdata[,i] <- (thisdata[,i] * min(LibSize))/sum(thisdata[,i])
-	}
-	#sort and remove features with zeros and less than one.
-	thisdata <- thisdata[rowMeans(thisdata) >= 1,]
-	thisdata_ori <- thisdata
-	
-	if (distribution == "Gamma") {
-		thisdata <- thisdata[order(rowMeans(thisdata)),]
-		thisdata <- thisdata[rowSums(thisdata != 0) == length(thisdata[1,]),]
-		meanList <- rowMeans(thisdata)
-		b <- log(meanList)
-		
-		Klist <- vector(mode="numeric",length(thisdata[,1]))	
-		for (i in seq_along(thisdata[,1])) {
-			Klist[i] <- gammaShape(thisdata[i,])
-		}
-		
-		if (length(Klist) == length(meanList)) {
-			Fit <- lm((log(Klist))~(log(meanList)))
-		} else {
-			Klist <- vector(mode="numeric",length(thisdata[,1]))
-			meanList <- vector(mode="numeric",length(thisdata[,1]))
-			for (i in 1:length(thisdata[,1])) {
-				Klist[i] <- gammaShape(thisdata[i,])
-				meanList[i] <- mean(thisdata[i,])
-			}
-			Fit <- lm((log(Klist))~(log(meanList)))
-		}
-		constant <- Fit$coefficients[[1]]
-		slope <- Fit$coefficients[[2]]
-		Klist <- function (x) {
-			return(exp(slope * log(x) + constant))
-		}
-		gammamatrix <- matrix(0, ncol=(2 * NumRep), nrow=NumFea)
-		RN <- vector(mode="character", NumFea)
-		for (i in 1:NumFea) {
-			RN[i] <- paste("Gene",i,sep="")
-		}
-		rownames(gammamatrix) <- RN	
-
-		Proportion <- NumDiff/NumFea
-		if (Proportion > 0.9){
-			stop("Error: NumDiff is too large. Proportion of Differential Feature is larger than 90%.")
-		}
-		if (Proportion <= 0){
-			stop("Error: NumDiff is too small. Proportion of Differential Feature is smaller than 5%.")
-		}
-		#Minimum Fold change (FC) for pvalue to reach 0.05
-		pvalue <- 1
-		minBound <- 1
-		#FC of 5 is sure to be significant, so there is no need to search for boundary. If it ever happens to be not so, it also serves as safety for the program, since FC > 5 not being significant doesn't make sense.
-		maxBound <- 5
-		midBound <- round((minBound + maxBound)/2,4)
-		s <- median(rowMeans(thisdata_ori))
-		theK <- Klist(s)
-		theta1 <- s/theK
-		NR2 <- NumRep
-		design <- matrix(nrow=(NR2 * 2), ncol=2)
-		colnames(design) <- c("SampleInfo", "Gam")
-		col1 <- c()
-		for (i in 1:NR2) {
-			col1 <- c(col1, "Normal")
-		}
-		for (i in 1:NR2) {
-			col1 <- c(col1, "Tumor")
-		}
-		design[,1] <- col1
-		design <- as.data.frame(design)
-		pvstore <- vector(mode="numeric",100)
-		while (midBound != minBound || midBound != maxBound) {
-			s2 <- s * midBound
-			theK2 <- Klist(s2)
-			theta2 <- s2/theK2
-			#Do the test 100 times for an average p value.
-			for (i in 1:100) {
-				a <- as.numeric(rgamma(NR2,shape=theK,scale=theta1))
-				b <- as.numeric(rgamma(NR2,shape=theK2,scale=theta2))
-				#WilTest <- wilcox.test(a,b,alternative = c("two.sided"))
-				#pvstore[i] <- as.numeric(WilTest[3])
-				expressionData <- c(log1p(a),log1p(b))
-				design[,2] <- as.numeric(expressionData)
-				AnovaSum <- summary(aov(Gam~SampleInfo,data=design))
-				pvstore[i] <- AnovaSum[[1]][,5][1]
-				if (is.na(pvstore[i])) {
-					pvstore[i] <- 1
-				}
-			}
-			if (mean(pvstore, na.rm=TRUE) < 0.05) {
-				maxBound <- midBound
-			} else {
-				minBound <- midBound
-			}
-			midBound <- (minBound + maxBound)/2
-		}
-		SigFC <- log(midBound)
-		#To create Normal Distributed of FCs, where portion of Differential features are satisfied, we need to find the stddev.
-		minBound <- 0
-		#FC of 100 is sure to be significant, so there is no need to search for boundary
-		maxBound <- 100
-		midBound <- (minBound + maxBound)/2
-		Probability <- vector(mode="double",NumFea)
-		while (midBound != minBound && midBound != maxBound) {
-			normmodel <- rnorm(NumFea,0,midBound)
-			for (i in seq_along(normmodel)) {
-				Probability[i] <- 1 - (2 * (pnorm(abs(normmodel[i]),0,SigFC/2, lower.tail = TRUE) - 0.5 ) )
-			}
-			Probability[is.na(Probability)] <- 1
-			Probability <- as.numeric(p.adjust(Probability,method ="BH"))
-			answer1 <- Proportion - length(Probability[Probability < 0.05])/NumFea
-			if (answer1 < 0) {
-				maxBound <- midBound
-			} else {
-				minBound <- midBound
-			}
-			midBound <- (minBound + maxBound)/2
-		}
-		FCstddev <- midBound
-		if (showinfo) {
-			message("Significant Log 2 Fold Change for p value is ", log(exp(SigFC),2),".",appendLF=TRUE)
-			message("Final Standard Deviation of log 2 fold change in the dataset is ", log(exp(FCstddev),2),".",appendLF=TRUE)
-			flush.console()
-		}
-		
-		
-		#Non differential features will have mean of 0 and stddev of SigFC
-		changes <- sort(rnorm(NumFea,0,FCstddev))
-		begin <- round(NumFea/2 - NumDiff/2,0)
-		ending <- round(NumFea/2 + NumDiff/2,0)
-		unchanged <- changes[begin:ending]
-		changing <- c(changes[1:begin],changes[ending:length(changes)])
-
-		
-		unchanged <- exp(unchanged)
-		changing <- exp(changing)
-		tobechanged <- sample(1:NumFea,NumDiff)
-		for (i in 1:NumFea) {
-			#sample from thisdata
-			TDsample <- sample(1:length(thisdata_ori[,1]),1)
-			thisrow <- thisdata_ori[TDsample,]
-			dmean <- mean(thisrow)
-			theK <- Klist(dmean)
-			theta <- dmean/theK
-			if (dmean == 0) {
-				gammamatrix[i,] <- rep(0,length(gammamatrix[1,]))
-			} else {
-				if ( i %in% tobechanged) {
-					if (sample(1:2,1) == 1) {
-						gammamatrix[i,1:NumRep] <- sample(as.vector(rgamma(NumRep* 2, shape=theK,scale=theta)),NumRep)
-						TBC <- sample(changing,1)
-						dmean <- dmean * TBC
-						theK <- Klist(dmean)
-						theta <- dmean/theK
-						gammamatrix[i,(NumRep + 1):length(gammamatrix[1,])] <- sample(as.vector(rgamma(NumRep* 2, shape=theK,scale=theta)),NumRep)
-					} else {
-						gammamatrix[i,(NumRep + 1):length(gammamatrix[1,])] <- sample(as.vector(rgamma(NumRep* 2, shape=theK,scale=theta)),NumRep)
-						TBC <- sample(changing,1)
-						dmean <- dmean * TBC
-						theK <- Klist(dmean)
-						theta <- dmean/theK
-						gammamatrix[i,1:NumRep] <- sample(as.vector(rgamma(NumRep * 2, shape=theK,scale=theta)),NumRep)
-					}
-				} else {
-					if (sample(1:2,1) == 1) {
-						gammamatrix[i,1:NumRep] <- sample(as.vector(rgamma(NumRep* 2, shape=theK,scale=theta)),NumRep)
-						TBC <- sample(unchanged,1)
-						dmean <- dmean * TBC
-						theK <- Klist(dmean)
-						theta <- dmean/theK
-						gammamatrix[i,(NumRep + 1):length(gammamatrix[1,])] <- sample(as.vector(rgamma(NumRep* 2, shape=theK,scale=theta)),NumRep)
-					} else {
-						gammamatrix[i,(NumRep + 1):length(gammamatrix[1,])] <- sample(as.vector(rgamma(NumRep* 2, shape=theK,scale=theta)),NumRep)
-						TBC <- sample(unchanged,1)
-						dmean <- dmean * TBC
-						theK <- Klist(dmean)
-						theta <- dmean/theK
-						gammamatrix[i,1:NumRep] <- sample(as.vector(rgamma(NumRep * 2,shape=theK,scale=theta)),NumRep)
-					}
-				}
-			}
-		}
-		gammamatrix[is.na(gammamatrix)] = 0
-		gammamatrix[is.infinite(gammamatrix)] = 0
-		gammamatrix[gammamatrix < 0] = 0
-		changes <- 2^(seq(-MaxLibSizelog2FC,0,0.001) )
-		thesechanges <- sample(changes,length(gammamatrix[1,]),replace=TRUE)
-
-		for (i in seq_along(gammamatrix[1,])) {
-			gammamatrix[,i] <- gammamatrix[,i] * thesechanges[i]
-		}
-
-		gammamatrix <-  as.matrix(floor(gammamatrix))
-		listing <- list(gammamatrix,as.numeric(sort(tobechanged)))
-		results <- setNames(listing, c("data", "DiffList"))
-		return (results)
-	}
-
-	if (distribution == "Poisson") {			
-		poismatrix <- matrix(0, ncol=(2 * NumRep), nrow=NumFea)
-		RN <- vector(mode="character", NumFea)
-		for (i in 1:NumFea) {
-			RN[i] <- paste("Gene",i,sep="")
-		}
-		rownames(poismatrix) <- RN	
-
-		Proportion <- NumDiff/NumFea
-		if (Proportion > 0.9){
-			stop("Error: NumDiff is too large. Proportion of Differential Feature is larger than 90%.")
-		}
-		if (Proportion <= 0){
-			stop("Error: NumDiff is too small. Proportion of Differential Feature is smaller than 5%.")
-		}
-		#Minimum FC for pvalue to reach 0.05
-		pvalue <- 1
-		minBound <- 1
-		#FC of 5 is sure to be significant, so there is no need to search for boundary. If it ever happens to be not so, it also serves as safety for the program, since FC > 5 not being significant doesn't make sense.
-		maxBound <- 5
-		midBound <- round((minBound + maxBound)/2,4)
-		s <- median(rowMeans(thisdata))
-		NR2 <- NumRep
-		design <- matrix(nrow=(NR2 * 2), ncol=2)
-		colnames(design) <- c("SampleInfo", "POIS")
-		col1 <- c()
-		for (i in 1:NR2) {
-			col1 <- c(col1, "Normal")
-		}
-		for (i in 1:NR2) {
-			col1 <- c(col1, "Tumor")
-		}
-		#####################################
-		
-		design[,1] <- col1
-		design <- as.data.frame(design)
-		pvstore <- vector(mode="numeric",100)
-		while (midBound != minBound || midBound != maxBound) {
-			s2 <- (s*midBound)
-			#Do the test 100 times for an average p value.
-			for (i in 1:100) {
-				expressionData <- c(log1p(as.numeric(rpois(NR2,s))),log1p(as.numeric(rpois(NR2,s2))))
-				design[,2] <- as.numeric(expressionData)
-				AnovaSum <- summary(aov(POIS~SampleInfo,data=design))
-				pvstore[i] <- AnovaSum[[1]][,5][1]
-				#WilTest <- wilcox.test(as.numeric(rpois(NR2,s)),as.numeric(rpois(NR2,s2)),alternative = c("two.sided"))
-				#pvstore[i] <- as.numeric(WilTest[3])
-				if (is.na(pvstore[i])) {
-					pvstore[i] <- 1
-				}
-			}
-			if (mean(pvstore) < 0.05) {
-				maxBound <- midBound
-			} else {
-				minBound <- midBound
-			}
-			midBound <- (minBound + maxBound)/2
-		}
-		SigFC <- log(midBound)
-
-		#To create Normal Distributed of FCs, where portion of Differential features are satisfied, we need to find the stddev.
-		minBound <- 0
-		#FC of 100 is sure to be significant, so there is no need to search for boundary
-		maxBound <- 100
-		midBound <- (minBound + maxBound)/2
-		Probability <- vector(mode="double",NumFea)
-		while (midBound != minBound && midBound != maxBound) {
-			normmodel <- rnorm(NumFea,0,midBound)
-			for (i in seq_along(normmodel)) {
-				Probability[i] <- 1 - (2 * (pnorm(abs(normmodel[i]),0,SigFC/2, lower.tail = TRUE) - 0.5 ) )
-			}
-			Probability[is.na(Probability)] <- 1
-			Probability <- as.numeric(p.adjust(Probability,method ="BH"))
-			answer1 <- Proportion - length(Probability[Probability < 0.05])/NumFea
-			if (answer1 < 0) {
-				maxBound <- midBound
-			} else {
-				minBound <- midBound
-			}
-			midBound <- (minBound + maxBound)/2
-		}
-		FCstddev <- midBound
-		if (showinfo) {
-			message("Significant Log 2 Fold Change for p value is ", log(exp(SigFC),2),".",appendLF=TRUE)
-			message("Final Standard Deviation of log 2 fold change in the dataset is ", log(exp(FCstddev),2),".",appendLF=TRUE)
-			flush.console()
-		}
-		
-		#Non differential features will have mean of 0 and stddev of SigFC
-		changes <- sort(rnorm(NumFea,0,FCstddev))
-		begin <- round(NumFea/2 - NumDiff/2,0)
-		ending <- round(NumFea/2 + NumDiff/2,0)
-		unchanged <- changes[begin:ending]
-		changing <- c(changes[1:begin],changes[ending:length(changes)])
-
-		
-		unchanged <- exp(unchanged)
-		changing <- exp(changing)
-		tobechanged <- sample(1:NumFea,NumDiff)
-		for (i in 1:NumFea) {
-			#sample from thisdata
-			TDsample <- sample(1:length(thisdata[,1]),1)
-			dmean <- mean(as.numeric(thisdata[TDsample,]))
-			if (dmean == 0) {
-				poismatrix[i,] <- rep(0,length(poismatrix[1,]))
-			} else {
-				if ( i %in% tobechanged) {
-					if (sample(1:2,1) == 1) {
-						poismatrix[i,1:NumRep] <- sample(as.vector(rpois(NumRep* 2, dmean)),NumRep)
-						TBC <- sample(changing,1)
-						dmean <- dmean * TBC
-						poismatrix[i,(NumRep + 1):length(poismatrix[1,])] <- sample(as.vector(rpois(NumRep* 2, dmean)),NumRep)
-					} else {
-						poismatrix[i,(NumRep + 1):length(poismatrix[1,])] <- sample(as.vector(rpois(NumRep* 2, dmean)),NumRep)
-						TBC <- sample(changing,1)
-						dmean <- dmean * TBC
-						poismatrix[i,1:NumRep] <- sample(as.vector(rpois(NumRep * 2, dmean)),NumRep)
-					}
-				} else {
-					if (sample(1:2,1) == 1) {
-						poismatrix[i,1:NumRep] <- sample(as.vector(rpois(NumRep* 2, dmean)),NumRep)
-						TBC <- sample(unchanged,1)
-						dmean <- dmean * TBC
-						poismatrix[i,(NumRep + 1):length(poismatrix[1,])] <- sample(as.vector(rpois(NumRep* 2, dmean)),NumRep)
-					} else {
-						poismatrix[i,(NumRep + 1):length(poismatrix[1,])] <- sample(as.vector(rpois(NumRep* 2, dmean)),NumRep)
-						TBC <- sample(unchanged,1)
-						dmean <- dmean * TBC
-						poismatrix[i,1:NumRep] <- sample(as.vector(rpois(NumRep * 2, dmean)),NumRep)
-					}
-				}
-			}
-		}
-		poismatrix[is.na(poismatrix)] = 0
-		poismatrix[is.infinite(poismatrix)] = 0
-		poismatrix[poismatrix < 0] = 0
-		changes <- 2^(seq(-MaxLibSizelog2FC,0,0.001) )
-		thesechanges <- sample(changes,length(poismatrix[1,]),replace=TRUE)
-		
-		for (i in seq_along(poismatrix[1,])) {
-			poismatrix[,i] <- poismatrix[,i] * thesechanges[i]
-		}
-
-		poismatrix <-  as.matrix(floor(poismatrix))
-		listing <- list(poismatrix,as.numeric(sort(tobechanged)))
-		results <- setNames(listing, c("data", "DiffList"))
-
-		return (results)
-	}
-
-	if (distribution == "LogNorm") {
-		thisdata <- thisdata[order(rowMeans(thisdata)),]
-		thisdata <- thisdata[rowSums(thisdata != 0) == length(thisdata[1,]),]
-		
-		
-		Fit <- lm((log(rowSDs(thisdata)))~(log(rowMeans(thisdata))))
-		MeanList <- rowMeans(thisdata)
-		FindSD <- function(inputmean) {
-			return (exp(log(inputmean) * Fit$coefficients[[2]] + Fit$coefficients[[1]] ))
-		}
-		lnormmatrix <- matrix(0, ncol=(2 * NumRep), nrow=NumFea)
-		RN <- vector(mode="character", NumFea)
-		for (i in 1:NumFea) {
-			RN[i] <- paste("Gene",i,sep="")
-		}
-		rownames(lnormmatrix) <- RN	
-
-		Proportion <- NumDiff/NumFea
-		if (Proportion > 0.9){
-			stop("Error: NumDiff is too large. Proportion of Differential Feature is larger than 90%.")
-		}
-		if (Proportion <= 0){
-			stop("Error: NumDiff is too small. Proportion of Differential Feature is smaller than 5%.")
-		}
-		#Minimum FC for pvalue to reach 0.05
-		pvalue <- 1
-		minBound <- 1
-		#FC of 5 is sure to be significant, so there is no need to search for boundary. If it ever happens to be not so, it also serves as safety for the program, since FC > 5 not being significant doesn't make sense.
-		maxBound <- 5
-		midBound <- round((minBound + maxBound)/2,4)
-		mediandata <- thisdata[round(length(thisdata[,1])/2,0),]
-		theMean <- median(rowMeans(thisdata_ori))
-		theSD <- FindSD(theMean)
-		LNMean <- log(theMean) - 0.5 * log((theSD/theMean)^2 + 1)
-		LNSD <- (log((theSD/theMean)^2 + 1) )^0.5
-		NR2 <- NumRep
-		design <- matrix(nrow=(NR2 * 2), ncol=2)
-		colnames(design) <- c("SampleInfo", "lnorm")
-		col1 <- c()
-		for (i in 1:NR2) {
-			col1 <- c(col1, "Normal")
-		}
-		for (i in 1:NR2) {
-			col1 <- c(col1, "Tumor")
-		}
-		design[,1] <- col1
-		design <- as.data.frame(design)
-		pvstore <- vector(mode="numeric",100)
-		while (midBound != minBound || midBound != maxBound) {
-			theMean2 <- theMean * midBound
-			theSD2 <- FindSD(theMean2)
-			LNMean2 <- log(theMean2) - 0.5 * log((theSD2/theMean2)^2 + 1)
-			LNSD2 <- (log((theSD2/theMean2)^2 + 1) )^0.5
-			#Do the test 100 times for an average p value.
-			for (i in 1:100) {
-				a <- abs(as.numeric(rlnorm(NR2,meanlog = LNMean, sdlog = LNSD)))
-				b <- abs(as.numeric(rlnorm(NR2,meanlog = LNMean2, sdlog = LNSD2)))
-				#WilTest <- wilcox.test(a,b,alternative = c("two.sided"))
-				#pvstore[i] <- as.numeric(WilTest[3])
-				expressionData <- c(log1p(a),log1p(b))
-				design[,2] <- as.numeric(expressionData)
-				AnovaSum <- summary(aov(lnorm~SampleInfo,data=design))
-				pvstore[i] <- AnovaSum[[1]][,5][1]
-				if (is.na(pvstore[i])) {
-					pvstore[i] <- 1
-				}
-			}
-			if (mean(pvstore) < 0.05) {
-				maxBound <- midBound
-			} else {
-				minBound <- midBound
-			}
-			midBound <- (minBound + maxBound)/2
-		}
-		SigFC <- log(midBound)
-
-		#To create Normal Distributed of FCs, where portion of Differential features are satisfied, we need to find the stddev.
-		minBound <- 0
-		#FC of 100 is sure to be significant, so there is no need to search for boundary
-		maxBound <- 100
-		midBound <- (minBound + maxBound)/2
-		Probability <- vector(mode="double",NumFea)
-		while (midBound != minBound && midBound != maxBound) {
-			normmodel <- rnorm(NumFea,0,midBound)
-			for (i in seq_along(normmodel)) {
-				Probability[i] <- 1 - (2 * (pnorm(abs(normmodel[i]),0,SigFC/2, lower.tail = TRUE) - 0.5 ) )
-			}
-			Probability[is.na(Probability)] <- 1
-			Probability <- as.numeric(p.adjust(Probability,method ="BH"))
-			answer1 <- Proportion - length(Probability[Probability < 0.05])/NumFea
-			if (answer1 < 0) {
-				maxBound <- midBound
-			} else {
-				minBound <- midBound
-			}
-			midBound <- (minBound + maxBound)/2
-		}
-		FCstddev <- midBound
-		if (showinfo) {
-			message("Significant Log 2 Fold Change for p value is ", log(exp(SigFC),2),".",appendLF=TRUE)
-			message("Final Standard Deviation of log 2 fold change in the dataset is ", log(exp(FCstddev),2),".",appendLF=TRUE)
-			flush.console()
-		}
-		
-		#Non differential features will have mean of 0 and stddev of SigFC
-		changes <- sort(rnorm(NumFea,0,FCstddev))
-		begin <- round(NumFea/2 - NumDiff/2,0)
-		ending <- round(NumFea/2 + NumDiff/2,0)
-		unchanged <- changes[begin:ending]
-		changing <- c(changes[1:begin],changes[ending:length(changes)])
-
-		unchanged <- exp(unchanged)
-		changing <- exp(changing)
-		tobechanged <- sample(1:NumFea,NumDiff)
-		for (i in 1:NumFea) {
-			#sample from thisdata
-			TDsample <- sample(1:length(thisdata_ori[,1]),1)
-			thisrow <- thisdata_ori[TDsample,]
-			theMean <- mean(thisrow)
-			theSD <- FindSD(theMean)
-			LNMean <- log(theMean) - 0.5 * log((theSD/theMean)^2 + 1)
-			LNSD <- (log((theSD/theMean)^2 + 1) )^0.5
-			if (theMean == 0) {
-				lnormmatrix[i,] <- rep(0,length(lnormmatrix[1,]))
-			} else {
-				if ( i %in% tobechanged) {
-					if (sample(1:2,1) == 1) {
-						lnormmatrix[i,1:NumRep] <- (sample(as.vector(rlnorm(NumRep* 2,meanlog = LNMean, sdlog = LNSD)),NumRep))
-						TBC <- sample(changing,1)
-						theMean <- theMean * TBC
-						theSD <- FindSD(theMean)
-						LNMean <- log(theMean) - 0.5 * log((theSD/theMean)^2 + 1)
-						LNSD <- (log((theSD/theMean)^2 + 1) )^0.5
-						lnormmatrix[i,(NumRep + 1):length(lnormmatrix[1,])] <- (sample(as.vector(rlnorm(NumRep* 2,meanlog = LNMean, sdlog = LNSD)),NumRep))
-					} else {
-						lnormmatrix[i,(NumRep + 1):length(lnormmatrix[1,])] <- (sample(as.vector(rlnorm(NumRep* 2,meanlog = LNMean, sdlog = LNSD)),NumRep))
-						TBC <- sample(changing,1)
-						theMean <- theMean * TBC
-						theSD <- FindSD(theMean)
-						LNMean <- log(theMean) - 0.5 * log((theSD/theMean)^2 + 1)
-						LNSD <- (log((theSD/theMean)^2 + 1) )^0.5
-						lnormmatrix[i,1:NumRep] <- (sample(as.vector(rlnorm(NumRep * 2,meanlog = LNMean, sdlog = LNSD)),NumRep))
-					}
-				} else {
-					if (sample(1:2,1) == 1) {
-						lnormmatrix[i,1:NumRep] <- (sample(as.vector(rlnorm(NumRep* 2,meanlog = LNMean, sdlog = LNSD)),NumRep))
-						TBC <- sample(unchanged,1)
-						theMean <- theMean * TBC
-						theSD <- FindSD(theMean)
-						LNMean <- log(theMean) - 0.5 * log((theSD/theMean)^2 + 1)
-						LNSD <- (log((theSD/theMean)^2 + 1) )^0.5
-						lnormmatrix[i,(NumRep + 1):length(lnormmatrix[1,])] <- (sample(as.vector(rlnorm(NumRep* 2,meanlog = LNMean, sdlog = LNSD)),NumRep))
-					} else {
-						lnormmatrix[i,(NumRep + 1):length(lnormmatrix[1,])] <- (sample(as.vector(rlnorm(NumRep* 2,meanlog = LNMean, sdlog = LNSD)),NumRep))
-						TBC <- sample(unchanged,1)
-						theMean <- theMean * TBC
-						theSD <- FindSD(theMean)
-						LNMean <- log(theMean) - 0.5 * log((theSD/theMean)^2 + 1)
-						LNSD <- (log((theSD/theMean)^2 + 1) )^0.5
-						lnormmatrix[i,1:NumRep] <- (sample(as.vector(rlnorm(NumRep * 2,meanlog = LNMean, sdlog = LNSD)),NumRep))
-					}
-				}
-			}
-		}
-		
-		lnormmatrix[is.na(lnormmatrix)] = 0
-		lnormmatrix[is.infinite(lnormmatrix)] = 0
-		lnormmatrix[lnormmatrix < 0] = 0
-		changes <- 2^(seq(-MaxLibSizelog2FC,0,0.001) )
-		thesechanges <- sample(changes,length(lnormmatrix[1,]),replace=TRUE)
-		for (i in seq_along(lnormmatrix[1,])) {
-			lnormmatrix[,i] <- lnormmatrix[,i] * thesechanges[i]
-		}
-		lnormmatrix <-  as.matrix(floor(lnormmatrix))
-		listing <- list(lnormmatrix,as.numeric(sort(tobechanged)))
-		results <- setNames(listing, c("data", "DiffList"))
-		return (results)
-	}
-
-	if (distribution == "NB") {
-		thisdata_ori <- thisdata
-		thisdata <- thisdata[order(rowMeans(thisdata)),]
-		thisdata <- thisdata[rowSums(thisdata != 0) == length(thisdata[1,]),]
-		
-		MeanList <- vector(mode="numeric",length(thisdata[,1]))
-		d <- vector(mode="numeric",length(thisdata[,1]))
-		
-		for (i in seq_along(thisdata[,1])){
-			x <- thisdata[i,]
-			MeanList[i] <- mean(x)
-			d[i] <- as.numeric(unlist((glm.nb(x~1))[[24]]))
-		}
-		MeanList <- MeanList[!is.na(d)]
-		d <- d[!is.na(d)]
-
-		Fit <- lm((log(d))~(log(MeanList)))
-		FindDispersion <- function(inputmean) {
-			return (exp(log(inputmean) * Fit$coefficients[[2]] + Fit$coefficients[[1]] ))
-		}
-		
-		nbmatrix <- matrix(0, ncol=(2 * NumRep), nrow=NumFea)
-		RN <- vector(mode="character", NumFea)
-		for (i in 1:NumFea) {
-			RN[i] <- paste("Gene",i,sep="")
-		}
-		rownames(nbmatrix) <- RN	
-		
-		Proportion <- NumDiff/NumFea
-		if (Proportion > 0.9){
-			stop("Error: NumDiff is too large. Proportion of Differential Feature is larger than 90%.")
-		}
-		if (Proportion <= 0){
-			stop("Error: NumDiff is too small. Proportion of Differential Feature is smaller than 5%.")
-		}
-		#Minimum FC for pvalue to reach 0.05
-		pvalue <- 1
-		minBound <- 1
-		#FC of 5 is sure to be significant, so there is no need to search for boundary. If it ever happens to be not so, it also serves as safety for the program, since FC > 5 not being significant doesn't make sense.
-		maxBound <- 5
-		midBound <- round((minBound + maxBound)/2,4)
-		themean <- median(rowMeans(thisdata_ori))
-		theDis <- FindDispersion(themean)
-		
-		NR2 <- NumRep
-		design <- matrix(nrow=(NR2 * 2), ncol=2)
-		colnames(design) <- c("SampleInfo", "Gam")
-		col1 <- c()
-		for (i in 1:NR2) {
-			col1 <- c(col1, "Normal")
-		}
-		for (i in 1:NR2) {
-			col1 <- c(col1, "Tumor")
-		}
-		design[,1] <- col1
-		design <- as.data.frame(design)
-		pvstore <- vector(mode="numeric",100)
-		while (midBound != minBound || midBound != maxBound) {
-			themean2 <- themean * midBound
-			theDis2 <- FindDispersion(themean2)
-			
-			#Do the test 100 times for an average p value.
-			for (i in 1:100) {
-				a <- as.numeric(rnbinom(NR2,size=theDis,mu=themean))
-				b <- as.numeric(rnbinom(NR2,size=theDis2,mu=themean2))
-				#WilTest <- wilcox.test(a,b,alternative = c("two.sided"))
-				#pvstore[i] <- as.numeric(WilTest[3])
-				expressionData <- c(log1p(a),log1p(b))
-				design[,2] <- as.numeric(expressionData)
-				AnovaSum <- summary(aov(Gam~SampleInfo,data=design))
-				pvstore[i] <- AnovaSum[[1]][,5][1]
-				if (is.na(pvstore[i])) {
-					pvstore[i] <- 1
-				}
-			}
-			if (mean(pvstore, na.rm=TRUE) < 0.05) {
-				maxBound <- midBound
-			} else {
-				minBound <- midBound
-			}
-			midBound <- (minBound + maxBound)/2
-		}
-		SigFC <- log(midBound)
-
-		#To create Normal Distributed of FCs, where portion of Differential features are satisfied, we need to find the stddev.
-		minBound <- 0
-		#FC of 100 is sure to be significant, so there is no need to search for boundary
-		maxBound <- 100
-		midBound <- (minBound + maxBound)/2
-		Probability <- vector(mode="double",NumFea)
-		while (midBound != minBound && midBound != maxBound) {
-			normmodel <- rnorm(NumFea,0,midBound)
-			for (i in seq_along(normmodel)) {
-				Probability[i] <- 1 - (2 * (pnorm(abs(normmodel[i]),0,SigFC/2, lower.tail = TRUE) - 0.5 ) )
-			}
-			Probability[is.na(Probability)] <- 1
-			Probability <- as.numeric(p.adjust(Probability,method ="BH"))
-			answer1 <- Proportion - length(Probability[Probability < 0.05])/NumFea
-			if (answer1 < 0) {
-				maxBound <- midBound
-			} else {
-				minBound <- midBound
-			}
-			midBound <- (minBound + maxBound)/2
-		}
-		FCstddev <- midBound
-		if (showinfo) {
-			message("Significant Log 2 Fold Change for p value is ", log(exp(SigFC),2),".",appendLF=TRUE)
-			message("Final Standard Deviation of log 2 fold change in the dataset is ", log(exp(FCstddev),2),".",appendLF=TRUE)
-			flush.console()
-		}
-		
-		#Non differential features will have mean of 0 and stddev of SigFC
-		changes <- sort(rnorm(NumFea,0,FCstddev))
-		begin <- round(NumFea/2 - NumDiff/2,0)
-		ending <- round(NumFea/2 + NumDiff/2,0)
-		unchanged <- changes[begin:ending]
-		changing <- c(changes[1:begin],changes[ending:length(changes)])
-
-		
-		unchanged <- exp(unchanged)
-		changing <- exp(changing)
-		tobechanged <- sample(1:NumFea,NumDiff)
-		for (i in 1:NumFea) {
-			#sample from thisdata
-			TDsample <- sample(1:length(thisdata_ori[,1]),1)
-			thisrow <- thisdata_ori[TDsample,]
-			themean <- mean(thisrow)
-			theDis <- FindDispersion(themean)
-		
-			
-			if (themean == 0) {
-				nbmatrix[i,] <- rep(0,length(nbmatrix[1,]))
-			} else {
-				if ( i %in% tobechanged) {
-					if (sample(1:2,1) == 1) {
-						nbmatrix[i,1:NumRep] <- sample(as.vector(rnbinom(NumRep* 2,size=theDis,mu=themean)),NumRep)
-						TBC <- sample(changing,1)
-						themean <- themean * TBC
-						theDis <- FindDispersion(themean)
-						nbmatrix[i,(NumRep + 1):length(nbmatrix[1,])] <- sample(as.vector(rnbinom(NumRep* 2,size=theDis,mu=themean)),NumRep)
-					} else {
-						nbmatrix[i,(NumRep + 1):length(nbmatrix[1,])] <- sample(as.vector(rnbinom(NumRep* 2,size=theDis,mu=themean)),NumRep)
-						TBC <- sample(changing,1)
-						themean <- themean * TBC
-						theDis <- FindDispersion(themean)
-						nbmatrix[i,1:NumRep] <- sample(as.vector(rnbinom(NumRep* 2,size=theDis,mu=themean)),NumRep)
-					}
-				} else {
-					if (sample(1:2,1) == 1) {
-						nbmatrix[i,1:NumRep] <- sample(as.vector(rnbinom(NumRep* 2,size=theDis,mu=themean)),NumRep)
-						TBC <- sample(unchanged,1)
-						themean <- themean * TBC
-						theDis <- FindDispersion(themean)
-						nbmatrix[i,(NumRep + 1):length(nbmatrix[1,])] <- sample(as.vector(rnbinom(NumRep* 2,size=theDis,mu=themean)),NumRep)
-					} else {
-						nbmatrix[i,(NumRep + 1):length(nbmatrix[1,])] <- sample(as.vector(rnbinom(NumRep* 2,size=theDis,mu=themean)),NumRep)
-						TBC <- sample(unchanged,1)
-						themean <- themean * TBC
-						theDis <- FindDispersion(themean)
-						nbmatrix[i,1:NumRep] <- sample(as.vector(rnbinom(NumRep* 2,size=theDis,mu=themean)),NumRep)
-					}
-				}
-			}
-		}
-		nbmatrix[is.na(nbmatrix)] = 0
-		nbmatrix[is.infinite(nbmatrix)] = 0
-		nbmatrix[nbmatrix < 0] = 0
-		changes <- 2^(seq(-MaxLibSizelog2FC,0,0.001) )
-		thesechanges <- sample(changes,length(nbmatrix[1,]),replace=TRUE)
-
-		for (i in seq_along(nbmatrix[1,])) {
-			nbmatrix[,i] <- nbmatrix[,i] * thesechanges[i]
-		}
-
-		nbmatrix <-  as.matrix(floor(nbmatrix))
-		listing <- list(nbmatrix,as.numeric(sort(tobechanged)))
-		results <- setNames(listing, c("data", "DiffList"))
-
-		return (results)
+		return (t(datamatrix))
 	}
 	
 }
-

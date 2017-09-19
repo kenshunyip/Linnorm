@@ -1,32 +1,12 @@
 #Linnorm
 
-Linnorm is an R package. The main function, Linnorm(), normalizes RNA-seq expression data or large scale count dataset for parametric tests. This is an important step in differentially expressed gene analysis and gene-correlation study.
-
-
-In addition, it contains several functions that simulates RNA-seq expression data based on known distributions, including Gamma, Log Normal, Negative Binomial and Poisson. These functions assumes the input dataset to be replicates of the same sample. One good source of such dataset is the seqc dataset, which is an R package in Bioconductor.
-
-
-Linnorm_x.x.tar.gz contains the installation file for R. Source codes are located in the Linnorm directory.
-
-
-
+Linnorm is an R package for the analysis of RNA-seq, scRNA-seq, ChIP-seq count data or any large scale count data. It transforms such datasets for parametric tests. In addition to the transformtion function (Linnorm), the following pipelines are implemented: 1. Library size/Batch effect normalization (Linnorm.Norm), 2. Cell subpopluation analysis and visualization using t-SNE or PCA K-means clustering or Hierarchical clustering (Linnorm.tSNE, Linnorm.PCA, Linnorm.HClust), 3. Differential expression analysis or differential peak detection using limma (Linnorm.limma), 4. Highly variable gene discovery and visualization (Linnorm.HVar), 5. Gene correlation network analysis and visualization (Linnorm.Cor), 6. Stable gene selection for scRNA-seq data; for users without or do not want to rely on spike-in genes (Linnorm.SGenes). 7. Data imputation. (under development) (Linnorm.DataImput). Linnorm can work with raw count, CPM, RPKM, FPKM and TPM. Additionally, the RnaXSim function is included for simulating RNA-seq data for the evaluation of DEG analysis methods.
 
 #Installation:
 
 
-1) Download and put Linnorm_0.99.0.tar.gz to your working directory.
-
-
-2) Inside your working directory, enter R environment.
-
-
-3) Run the command: install.packages("./Linnorm_0.99.0.tar.gz", repos=NULL, type="source")
-
-
-4) Done
-
-
-
+source("https://bioconductor.org/biocLite.R")
+biocLite("Linnorm")
 
 
 #Manual:
