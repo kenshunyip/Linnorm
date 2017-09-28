@@ -6,6 +6,7 @@ Linnorm is an R package for the analysis of RNA-seq, scRNA-seq, ChIP-seq count d
 
 
 source("https://bioconductor.org/biocLite.R")
+
 biocLite("Linnorm")
 
 
