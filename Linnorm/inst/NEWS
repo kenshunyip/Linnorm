@@ -1,3 +1,7 @@
+29th, October, 2017
+    o Development 2.1.7
+        o Enabled RcppArmadillo 64 bit and C++11, which allow Linnorm to accept huge datasets.
+
 20th, March, 2017
     o Development 1.99.18
         o Bug fix on BE_strength when it is set to zero.
