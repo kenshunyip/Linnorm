@@ -150,8 +150,8 @@ Linnorm <- function(datamatrix, RowSamples = FALSE, spikein = NULL, spikein_log2
 		if (LC_Threshold > max_F_LC) {
 			if (showinfo) {
 				message(paste("Filter low count gene threshold is ", LC_Threshold, ". It is larger than max_F_LC, ", max_F_LC, ", which is now used.", sep=""))
-				LC_Threshold <- max_F_LC
 			}
+			LC_Threshold <- max_F_LC
 		}
 		if (BE_F_LC_Genes == "Auto") {
 			BE_F_LC_Genes <- LC_Threshold

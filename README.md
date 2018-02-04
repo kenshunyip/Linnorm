@@ -10,6 +10,9 @@ source("https://bioconductor.org/biocLite.R")
 biocLite("Linnorm")
 
 
+or: You can download from github and install it.
+
+
 #Manual:
 
 
