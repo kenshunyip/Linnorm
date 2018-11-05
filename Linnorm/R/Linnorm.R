@@ -8,7 +8,7 @@
 #' @param showinfo	Logical. Show algorithm running information. Defaults to FALSE.
 #' @param perturbation	Integer >=2 or "Auto". To search for an optimal minimal deviation parameter (please see the article), Linnorm uses the iterated local search algorithm which perturbs away from the initial local minimum. The range of the area searched in each perturbation is exponentially increased as the area get further away from the initial local minimum, which is determined by their index. This range is calculated by 10 * (perturbation ^ index). Defaults to "Auto".
 #' @param Filter	Logical. Should Linnorm filter the dataset in the end results? Defaults to FALSE.
-#' @param minNonZeroPortion Double >= 0.01, <= 0.95. Minimum non-Zero Portion Threshold. Genes not satisfying this threshold will be removed. For exmaple, if set to 0.3, genes without at least 30 percent of the samples being non-zero will be removed. Defaults to 0.75.
+#' @param minNonZeroPortion Double >= 0.01, <= 0.95. Minimum non-Zero Portion Threshold. Genes not satisfying this threshold will be removed. For exmaple, if set to 0.3, genes without at least 30 percent of the samples being non-zero will be removed. Defaults to 0.3.
 #' @param L_F_p	Double >= 0, <= 1. Filter genes with standard deviation and skewness less than this p value before applying Linnorm algorithm. Defaults to 0.3173.
 #' @param L_F_LC_Genes	Double >= 0.01, <= 0.95 or Character "Auto". Filter this portion of the lowest expressing genes before applying Linnorm algorithm. It can be determined automatically by setting to "Auto". Defaults to "Auto".
 #' @param L_F_HC_Genes	Double >= 0.01, <= 0.95. Filter this portion of the highest expressing genes before applying Linnorm algorithm. Defaults to 0.01.
@@ -31,7 +31,7 @@
 #' @import
 #' Rcpp
 #' RcppArmadillo
-Linnorm <- function(datamatrix, RowSamples = FALSE, spikein = NULL, spikein_log2FC = NULL, showinfo = FALSE, perturbation="Auto", Filter=FALSE, minNonZeroPortion = 0.75, L_F_p = 0.3173, L_F_LC_Genes = "Auto", L_F_HC_Genes = 0.01, BE_F_p = 0.3173, BE_F_LC_Genes = "Auto", BE_F_HC_Genes = 0.01, BE_strength = 0.5, max_F_LC=0.75, DataImputation = FALSE, ...) {
+Linnorm <- function(datamatrix, RowSamples = FALSE, spikein = NULL, spikein_log2FC = NULL, showinfo = FALSE, perturbation="Auto", Filter=FALSE, minNonZeroPortion = 0.3, L_F_p = 0.3173, L_F_LC_Genes = "Auto", L_F_HC_Genes = 0.01, BE_F_p = 0.3173, BE_F_LC_Genes = "Auto", BE_F_HC_Genes = 0.01, BE_strength = 0.5, max_F_LC=0.75, DataImputation = FALSE, ...) {
 	#Linnorm transformation
 	#Author: (Ken) Shun Hang Yip <shunyip@bu.edu>
 	

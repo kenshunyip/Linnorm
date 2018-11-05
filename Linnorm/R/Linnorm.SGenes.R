@@ -4,7 +4,7 @@
 #' @param datamatrix	The matrix or data frame that contains your dataset. Each row is a feature (or Gene) and each column is a sample (or replicate). Raw Counts, CPM, RPKM, FPKM or TPM are supported. Undefined values such as NA are not supported. It is not compatible with log transformed datasets.
 #' @param RowSamples	Logical. In the datamatrix, if each row is a sample and each row is a feature, set this to TRUE so that you don't need to transpose it. Linnorm works slightly faster with this argument set to TRUE, but it should be negligable for smaller datasets. Defaults to FALSE.
 #' @param showinfo	Logical. Show algorithm running information. Defaults to FALSE.
-#' @param minNonZeroPortion Double >=0, <= 1. Minimum non-Zero Portion Threshold. Genes not satisfying this threshold will be removed. For exmaple, if set to 0.3, genes without at least 30 percent of the samples being non-zero will be removed. Defaults to 0.75.
+#' @param minNonZeroPortion Double >=0, <= 1. Minimum non-Zero Portion Threshold. Genes not satisfying this threshold will be removed. For exmaple, if set to 0.3, genes without at least 30 percent of the samples being non-zero will be removed. Defaults to 0.3.
 #' @param F_p	Double >=0, <= 1. Filter genes with standard deviation and skewness less than this p value. Defaults to 0.3173.
 #' @param F_LC_Genes	Double >= 0.01, <= 0.95 or Character "Auto". Filter this portion of the lowest expressing genes. It can be determined automatically by setting to "Auto". Defaults to "Auto".
 #' @param F_HC_Genes	Double >=0, <= 1. Filter this portion of the highest expressing genes. Defaults to 0.01.
@@ -21,7 +21,7 @@
 #' @import
 #' Rcpp
 #' RcppArmadillo
-Linnorm.SGenes <- function (datamatrix, RowSamples = FALSE, showinfo=FALSE, minNonZeroPortion = 0.75, F_p = 0.3173, F_LC_Genes = "Auto", F_HC_Genes = 0.01, max_F_LC = 0.75) {
+Linnorm.SGenes <- function (datamatrix, RowSamples = FALSE, showinfo=FALSE, minNonZeroPortion = 0.3, F_p = 0.3173, F_LC_Genes = "Auto", F_HC_Genes = 0.01, max_F_LC = 0.75) {
 	#Model stable gene selection
 	#Author: (Ken) Shun Hang Yip <shunyip@bu.edu>
 	
