@@ -1,6 +1,6 @@
-5th, November, 2018
-	o Release 2.4.1
-		o Bug Fix on minNonZeroPortion too large problem.
+6th, November, 2018
+	o 2.7.1
+		Making the minNonZeroPortion threshold less stringent for the convenience of users.
 
 4th, February, 2018
     o Release 2.2.1
